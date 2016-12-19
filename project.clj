@@ -14,7 +14,6 @@
               :builds {
                        :main {
                               :source-paths ["src/cljs/"]
-                              :jar true
                               :compiler {
                                          :output-to "resources/public/js/main.js"
                                          :optimizations :whitespace
