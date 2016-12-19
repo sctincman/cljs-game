@@ -24,8 +24,15 @@
   "View for the home page. Returns hiccup formatted HTML5."
   [is-debug]
   (hic-p/html5
-   (gen-page-head "Home" is-debug)
-   [:h1 (str "Home" (when is-debug (str " (Debug): " is-debug)))]
-   [:p "CLJS webapp game thing."]
-   [:canvas {:id "front-buffer"}]
-   footer-bar))
+    (gen-page-head "Home" is-debug)
+    [:body
+     [:h1 (str "Home" (when is-debug (str " (Debug): " is-debug)))]
+     [:p "CLJS webapp game thing."]
+     [:canvas {:id "front-buffer"}]
+     footer-bar]
+    [:script
+     "document.onreadystatechange = function () {
+        if (document.readyState === \"complete\") {
+          cljs_game.core.init_game(document.getElementById(\"front-buffer\"))
+        }
+      }"]))

@@ -16,6 +16,9 @@
                               :source-paths ["src/cljs/"]
                               :compiler {
                                          :output-to "resources/public/js/main.js"
+                                         :foreign-libs [{:file "resources/libs/three.module.js"
+                                                         :provides  ["threejs"]
+                                                         :module-type :es6}]
                                          :optimizations :whitespace
                                          :pretty-print true
                                         ;:source-map "resources/public/js/main.js.map"
@@ -26,6 +29,9 @@
                               :jar true
                               :compiler {
                                          :output-to "resources/public/js/main.min.js"
+                                         :foreign-libs [{:file "resources/libs/three.module.js"
+                                                         :provides  ["threejs"]
+                                                         :module-type :es6}]
                                          :optimizations :advanced
                                          :pretty-print false
                                         ;:source-map "resources/public/js/main.js.map"
