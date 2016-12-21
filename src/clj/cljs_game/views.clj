@@ -33,6 +33,6 @@
     [:script
      "document.onreadystatechange = function () {
         if (document.readyState === \"complete\") {
-          cljs_game.core.init_game(document.getElementById(\"front-buffer\"))
+          cljs_game.core.init_game()
         }
       }"]))
