@@ -28,7 +28,6 @@
     [:body
      [:h1 (str "Home" (when is-debug (str " (Debug): " is-debug)))]
      [:p "CLJS webapp game thing."]
-     [:canvas {:id "front-buffer"}]
      footer-bar]
     [:script
      "document.onreadystatechange = function () {
