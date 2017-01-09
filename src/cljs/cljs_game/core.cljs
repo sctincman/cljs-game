@@ -5,40 +5,53 @@
 
 (def world (atom {}))
 
-(def command-queue (atom cljs.core/PersistentQueue.EMPTY))
+(def input-queue (atom cljs.core/PersistentQueue.EMPTY))
+
+(def input-mapping (atom
+                    { "w" {:type :input :action :up :target :player}
+                     "a" {:type :input :action :left :target :player}
+                     "s" {:type :input :action :down :target :player}
+                     "d" {:type :input :action :right :target :player}
+                     "i" {:type :input
+                          :action :info
+                          :target :none
+                          :execute (fn [] (println @world))}
+                     "p" {:type :input
+                          :action :pause
+                          :target :world
+                          :execute (fn [] (swap! world assoc :running
+                                                (not (@world :running))))}}))
 
 (defn handle-input [event]
   (let [key (.-key event)]
-    (swap! command-queue conj
-           (case key
-             "w" {:type :input :key :up}
-             "a" {:type :input :key :left}
-             "s" {:type :input :key :down}
-             "d" {:type :input :key :right}
-             "p" {:type :input :key :pause}))
-    (when (not (.-repeat event))
-      (print (.-repeat event)))))
+    (when (not (.-repeat event)))
+    (swap! input-queue conj (@input-mapping key))))
 
-(defn process-input []
-  (loop [attempts 10]
-    (let [command (peek @command-queue)]
-      (if command
-        ;; change? What if somethign else pops between above and below
-        ;; have function check if peek and item are same item, yay! then do pop
-        ;; else, recur w/o doing anything to try again.
-        (do (swap! command-queue pop)
-            (print command)
-            (when (and (= (command :type) :input)
-                       (= (command :key) :pause))
-              (swap! world assoc :running
-                     (not (@world :running))))
-            (recur (dec attempts)))))))
+(defn process-input [player-commands attempts]
+  (let [command (peek @input-queue)]
+    (if (and command (> attempts 0))
+      (do (swap! input-queue pop)
+          (process-input
+           (let [result
+                 (if (= :player (command :target))
+                   (conj player-commands command)
+                   (do ((command :execute))
+                       nil))]
+             (if result result player-commands))
+           (dec attempts)))
+      player-commands)))
 
 (defn update-world
   [delta-time]
-  (let [mesh (@world :mesh)]
-    (set! (.-x (.-rotation mesh)) (+ 0.01 (.-x (.-rotation mesh))))
-    (set! (.-y (.-rotation mesh)) (+ 0.02 (.-y (.-rotation mesh))))
+  (let [mesh (reduce (fn [mesh command]
+                       (cond
+                         (= :left (command :action)) (set! (.-x (.-rotation mesh)) (- (.-x (.-rotation mesh)) 0.01 ))
+                         (= :right (command :action)) (set! (.-x (.-rotation mesh)) (+ 0.01 (.-x (.-rotation mesh))))
+                         (= :up (command :action)) (set! (.-y (.-rotation mesh)) (- (.-y (.-rotation mesh)) 0.01))
+                         (= :down (command :action)) (set! (.-y (.-rotation mesh)) (+ 0.01 (.-y (.-rotation mesh)))))
+                       mesh)
+                     (@world :mesh) (@world :player-stream))]
+    (swap! world assoc :player-stream [])
     (swap! world assoc :mesh mesh)))
 
 (defn game-loop
@@ -47,7 +60,9 @@
         leftover-time (@world :accum-time)
         time-step 16.666666666666668]
     (swap! world assoc :prev-time now)
-    (process-input)
+    (let [player-stream (process-input nil 10)]
+      (swap! world assoc :player-stream (vec (concat (@world :player-stream)
+                                                     player-stream))))
     (when (@world :running)
       (swap! world assoc :leftover-time
              (loop [accumulated (+ leftover-time (- now prev))]
@@ -75,8 +90,10 @@
     (.setSize renderer js/window.innerWidth js/window.innerHeight)
     (js/document.body.appendChild (.-domElement renderer))
     (js/document.addEventListener "keydown" handle-input)
-    (swap! world assoc :prev js/Performance.now)
+    (swap! world assoc :prev-time js/Performance.now)
     (swap! world assoc :accum-time 0.0)
+    (swap! world assoc :player-stream [])
+    (swap! world assoc :running true)
     (let [animate (fn animate [current-time]
                     (js/requestAnimationFrame animate)
                     (game-loop current-time)
