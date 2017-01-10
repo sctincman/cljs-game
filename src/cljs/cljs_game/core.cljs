@@ -68,10 +68,12 @@
                                                      player-stream))))
     (when (@world :running)
       (swap! world assoc :leftover-time
-             (loop [accumulated (+ leftover-time (- now prev))]
-               (if (>= accumulated time-step)
+             (loop [accumulated (+ leftover-time (- now prev))
+                    attempts 10]
+               (if (and (>= accumulated time-step)
+                        (>= attempts 0))
                  (do (update-world time-step)
-                     (recur (- accumulated time-step)))
+                     (recur (- accumulated time-step) (dec attempts)))
                  accumulated))))))
 
 (defn ^:export init-game
