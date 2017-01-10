@@ -1,6 +1,7 @@
 (ns cljs-game.core
   (:require [threejs :as three]
-            [cljs-game.render :as render]))
+            [cljs-game.render :as render]
+            [cljs-game.input :as input]))
 
 (enable-console-print!)
 
@@ -8,42 +9,6 @@
                   :player-stream []
                   :running true
                   :entities []}))
-
-(def input-queue (atom cljs.core/PersistentQueue.EMPTY))
-
-(def input-mapping (atom
-                    { "w" {:type :input :action :up :target :player}
-                     "a" {:type :input :action :left :target :player}
-                     "s" {:type :input :action :down :target :player}
-                     "d" {:type :input :action :right :target :player}
-                     "i" {:type :input
-                          :action :info
-                          :target :none
-                          :execute (fn [] (println @world))}
-                     "p" {:type :input
-                          :action :pause
-                          :target :world
-                          :execute (fn [] (swap! world assoc :running
-                                                (not (@world :running))))}}))
-
-(defn handle-input [event]
-  (let [key (.-key event)]
-    (when (not (.-repeat event)))
-    (swap! input-queue conj (@input-mapping key))))
-
-(defn process-input [player-commands attempts]
-  (let [command (peek @input-queue)]
-    (if (and command (> attempts 0))
-      (do (swap! input-queue pop)
-          (process-input
-           (let [result
-                 (if (= :player (command :target))
-                   (conj player-commands command)
-                   (do ((command :execute))
-                       nil))]
-             (if result result player-commands))
-           (dec attempts)))
-      player-commands)))
 
 (defn update-world
   [delta-time]
@@ -63,7 +28,7 @@
         leftover-time (@world :accum-time)
         time-step 16.666666666666668]
     (swap! world assoc :prev-time now)
-    (let [player-stream (process-input nil 10)]
+    (let [player-stream (input/process-input nil 10)]
       (swap! world assoc :player-stream (vec (concat (@world :player-stream)
                                                      player-stream))))
     (when (@world :running)
@@ -90,9 +55,18 @@
     (.add scene light2)
     (.setSize renderer js/window.innerWidth js/window.innerHeight)
     (js/document.body.appendChild (.-domElement renderer))
-    (js/document.addEventListener "keydown" handle-input)
+    (js/document.addEventListener "keydown" input/handle-input)
     (swap! world assoc :prev-time js/Performance.now)
     (swap! world assoc :entities [test-cube])
+    (swap! input/input-mapping assoc "i" {:type :input
+                                          :action :info
+                                          :target :none
+                                          :execute (fn [] (println @world))})
+    (swap! input/input-mapping assoc "p" {:type :input
+                          :action :pause
+                          :target :world
+                          :execute (fn [] (swap! world assoc :running
+                                                (not (@world :running))))})
     (let [animate (fn animate [current-time]
                     (js/requestAnimationFrame animate)
                     (game-loop current-time)
