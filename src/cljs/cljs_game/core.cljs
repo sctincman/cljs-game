@@ -1,9 +1,13 @@
 (ns cljs-game.core
-  (:require [threejs :as three]))
+  (:require [threejs :as three]
+            [cljs-game.render :as render]))
 
 (enable-console-print!)
 
-(def world (atom {}))
+(def world (atom {:accum-time 0.0
+                  :player-stream []
+                  :running true
+                  :entities []}))
 
 (def input-queue (atom cljs.core/PersistentQueue.EMPTY))
 
@@ -43,16 +47,15 @@
 
 (defn update-world
   [delta-time]
-  (let [mesh (reduce (fn [mesh command]
-                       (cond
-                         (= :left (command :action)) (set! (.-x (.-rotation mesh)) (- (.-x (.-rotation mesh)) 0.01 ))
-                         (= :right (command :action)) (set! (.-x (.-rotation mesh)) (+ 0.01 (.-x (.-rotation mesh))))
-                         (= :up (command :action)) (set! (.-y (.-rotation mesh)) (- (.-y (.-rotation mesh)) 0.01))
-                         (= :down (command :action)) (set! (.-y (.-rotation mesh)) (+ 0.01 (.-y (.-rotation mesh)))))
-                       mesh)
-                     (@world :mesh) (@world :player-stream))]
-    (swap! world assoc :player-stream [])
-    (swap! world assoc :mesh mesh)))
+  (let [player (reduce (fn [entity command]
+                        (cond
+                          (= :left (command :action)) (update-in entity [:components :position-component :x] - 10)
+                          (= :right (command :action)) (update-in entity [:components :position-component :x] + 10)
+                          (= :up (command :action)) (update-in entity [:components :position-component :y] - 10)
+                          (= :down (command :action)) (update-in entity [:components :position-component :y] + 10)))
+                         (first (:entities @world)) (@world :player-stream))]
+    (swap! world assoc :entities [player])
+    (swap! world assoc :player-stream [])))
 
 (defn game-loop
   [now]
@@ -76,14 +79,10 @@
   (let [scene (three/Scene.)
         camera (three/PerspectiveCamera. 75 (/ js/window.innerWidth js/window.innerHeight) 0.1, 1000)
         renderer (three/WebGLRenderer.)
-        geometry (three/BoxGeometry. 200 200 200)
-        material (three/MeshStandardMaterial. (js-obj "color" 0xff0040 "wireframe" false))
-        mesh (three/Mesh. geometry material)
         light (three/AmbientLight. 0x404040)
-        light2 (three/PointLight. 0xffffff 2 0)]
+        light2 (three/PointLight. 0xffffff 2 0)
+        test-cube (render/test-cube scene)]
     (set! (.-z (.-position camera)) 900) 
-    (.add scene mesh)
-    (swap! world assoc :mesh mesh)
     (.add scene light)
     (.set (.-position light2) 300 300 300)
     (.add scene light2)
@@ -91,12 +90,10 @@
     (js/document.body.appendChild (.-domElement renderer))
     (js/document.addEventListener "keydown" handle-input)
     (swap! world assoc :prev-time js/Performance.now)
-    (swap! world assoc :accum-time 0.0)
-    (swap! world assoc :player-stream [])
-    (swap! world assoc :running true)
+    (swap! world assoc :entities [test-cube])
     (let [animate (fn animate [current-time]
                     (js/requestAnimationFrame animate)
                     (game-loop current-time)
-                    (.render renderer scene camera))]
+                    (render/render renderer scene camera (:entities @world)))]
       (animate js/Performance.now))))
 
