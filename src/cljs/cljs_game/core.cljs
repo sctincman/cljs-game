@@ -1,7 +1,7 @@
 (ns cljs-game.core
-  (:require [threejs :as three]
-            [cljs-game.render :as render]
-            [cljs-game.input :as input]))
+  (:require [cljs-game.render :as render]
+            [cljs-game.input :as input]
+            [cljs-game.ecs :as ecs]))
 
 (enable-console-print!)
 
@@ -33,22 +33,14 @@
                      (recur (- accumulated time-step) (dec attempts)))
                  accumulated))))))
 
-(defn ^:export init-game
-  []
-  (let [scene (three/Scene.)
-        camera (three/PerspectiveCamera. 75 (/ js/window.innerWidth js/window.innerHeight) 0.1, 1000)
-        renderer (three/WebGLRenderer.)
-        light (three/AmbientLight. 0x404040)
-        light2 (three/PointLight. 0xffffff 2 0)
-        test-cube (-> (render/test-cube scene)
+(defn ^:export init-game []
+  (let [backend (render/create-threejs-backend)
+        test-cube (-> (ecs/->Entity 42 {})
+                      (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0))
+                      (assoc-in [:components :render-component] (render/create-cube-component))
                       (assoc-in [:components :command-component] (input/->CommandComponent nil))
                       (assoc-in [:components :input-component] (input/->InputComponent nil)))]
-    (set! (.-z (.-position camera)) 900) 
-    (.add scene light)
-    (.set (.-position light2) 300 300 300)
-    (.add scene light2)
-    (.setSize renderer js/window.innerWidth js/window.innerHeight)
-    (js/document.body.appendChild (.-domElement renderer))
+    (render/add-to-backend backend test-cube)
     (js/document.addEventListener "keydown" input/handle-input)
     (swap! world assoc :prev-time js/Performance.now)
     (swap! world assoc :entities [test-cube])
@@ -64,6 +56,6 @@
     (let [animate (fn animate [current-time]
                     (js/requestAnimationFrame animate)
                     (game-loop current-time)
-                    (render/render renderer scene camera (:entities @world)))]
+                    (render/render backend (:entities @world)))]
       (animate js/Performance.now))))
 
