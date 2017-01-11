@@ -6,21 +6,12 @@
 (enable-console-print!)
 
 (def world (atom {:accum-time 0.0
-                  :player-stream []
                   :running true
                   :entities []}))
 
 (defn update-world
   [delta-time]
-  (let [player (reduce (fn [entity command]
-                        (cond
-                          (= :left (command :action)) (update-in entity [:components :position-component :x] - 10)
-                          (= :right (command :action)) (update-in entity [:components :position-component :x] + 10)
-                          (= :up (command :action)) (update-in entity [:components :position-component :y] - 10)
-                          (= :down (command :action)) (update-in entity [:components :position-component :y] + 10)))
-                         (first (:entities @world)) (@world :player-stream))]
-    (swap! world assoc :entities [player])
-    (swap! world assoc :player-stream [])))
+  )
 
 (defn game-loop
   [now]
@@ -28,9 +19,10 @@
         leftover-time (@world :accum-time)
         time-step 16.666666666666668]
     (swap! world assoc :prev-time now)
-    (let [player-stream (input/process-input nil 10)]
-      (swap! world assoc :player-stream (vec (concat (@world :player-stream)
-                                                     player-stream))))
+    (let [entities (-> (:entities @world)
+                       (input/process-input)
+                       (input/process-commands))]
+      (swap! world assoc :entities entities))
     (when (@world :running)
       (swap! world assoc :leftover-time
              (loop [accumulated (+ leftover-time (- now prev))
@@ -48,7 +40,9 @@
         renderer (three/WebGLRenderer.)
         light (three/AmbientLight. 0x404040)
         light2 (three/PointLight. 0xffffff 2 0)
-        test-cube (render/test-cube scene)]
+        test-cube (-> (render/test-cube scene)
+                      (assoc-in [:components :command-component] (input/->CommandComponent nil))
+                      (assoc-in [:components :input-component] (input/->InputComponent nil)))]
     (set! (.-z (.-position camera)) 900) 
     (.add scene light)
     (.set (.-position light2) 300 300 300)
@@ -63,10 +57,10 @@
                                           :target :none
                                           :execute (fn [] (println @world))})
     (swap! input/input-mapping assoc "p" {:type :input
-                          :action :pause
-                          :target :world
-                          :execute (fn [] (swap! world assoc :running
-                                                (not (@world :running))))})
+                                          :action :pause
+                                          :target :world
+                                          :execute (fn [] (swap! world assoc :running
+                                                                 (not (@world :running))))})
     (let [animate (fn animate [current-time]
                     (js/requestAnimationFrame animate)
                     (game-loop current-time)
