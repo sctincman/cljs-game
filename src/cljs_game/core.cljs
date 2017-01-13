@@ -11,8 +11,10 @@
                   :entities []}))
 
 (defn update-world
-  [delta-time entities]
-  )
+  [entities delta-time]
+  (map (fn [entity]
+         (update-in entity [:components :position-component :y] + 1))
+       entities))
 
 (defn game-loop
   [now]
@@ -20,19 +22,20 @@
         leftover-time (@world :accum-time)
         time-step 16.666666666666668]
     (swap! world assoc :prev-time now)
-    (let [entities (-> (:entities @world)
-                       (input/process-input)
-                       (input/process-commands))]
-      (swap! world assoc :entities entities))
-    (when (@world :running)
-      (swap! world assoc :leftover-time
-             (loop [accumulated (+ leftover-time (- now prev))
-                    attempts 10]
-               (if (and (>= accumulated time-step)
-                        (>= attempts 0))
-                 (do (update-world time-step (:entities @world))
-                   (recur (- accumulated time-step) (dec attempts)))
-                 accumulated))))))
+    (loop [accumulated (+ leftover-time (- now prev))
+           attempts 10
+           entities (:entities @world)]
+      (if (and (>= accumulated time-step)
+               (>= attempts 0)
+               (:running @world))
+        (recur (- accumulated time-step)
+               (dec attempts)
+               (-> entities
+                   (input/process-input)
+                   (input/process-commands)
+                   (update-world time-step)))
+        (do (swap! world assoc :leftover-time accumulated)
+          (swap! world assoc :entities entities))))))
 
 (defn ^:export init-game []
   (let [backend (render/create-threejs-backend)
