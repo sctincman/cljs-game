@@ -9,15 +9,24 @@
 
 (defonce input-queue (atom cljs.core/PersistentQueue.EMPTY))
 
-(defonce input-mapping (atom
-                         {"w" {:type :input :action :up :target :player
-                               :execute (fn [entity] (update-in entity [:components :position-component :y] - 10))}
-                          "a" {:type :input :action :left :target :player
-                               :execute (fn [entity] (update-in entity [:components :position-component :x] - 10))}
-                          "s" {:type :input :action :down :target :player
-                               :execute (fn [entity] (update-in entity [:components :position-component :y] + 10))}
-                          "d" {:type :input :action :right :target :player
-                               :execute (fn [entity] (update-in entity [:components :position-component :x] + 10))}}))
+(defonce input-mapping
+  (atom
+    {"w" {:type :input :action :up :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :velocity :y] + 0.5))}
+     "a" {:type :input :action :left :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :velocity :x] - 0.5))}
+     "s" {:type :input :action :down :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :velocity :y] - 0.5))}
+     "d" {:type :input :action :right :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :velocity :x] + 0.5))}
+     "t" {:type :input :action :up :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :acceleration :y] + 0.01))}
+     "f" {:type :input :action :left :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :acceleration :x] - 0.01))}
+     "g" {:type :input :action :down :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :acceleration :y] - 0.01))}
+     "h" {:type :input :action :right :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :acceleration :x] + 0.01))}}))
 
 (defn ^:export handle-input [event]
   (let [key (.-key event)

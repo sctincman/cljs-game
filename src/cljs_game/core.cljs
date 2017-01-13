@@ -1,7 +1,8 @@
 (ns cljs-game.core
   (:require [cljs-game.render :as render]
             [cljs-game.input :as input]
-            [cljs-game.entity :as ecs]))
+            [cljs-game.entity :as ecs]
+            [cljs-game.physics :as physics]))
 
 (enable-console-print!)
 
@@ -12,15 +13,13 @@
 
 (defn update-world
   [entities delta-time]
-  (map (fn [entity]
-         (update-in entity [:components :position-component :y] + 1))
-       entities))
+  entities)
 
 (defn game-loop
   [now]
   (let [prev (@world :prev-time)
         leftover-time (@world :accum-time)
-        time-step 16.666666666666668]
+        time-step 16.0]
     (swap! world assoc :prev-time now)
     (loop [accumulated (+ leftover-time (- now prev))
            attempts 10
@@ -33,6 +32,7 @@
                (-> entities
                    (input/process-input)
                    (input/process-commands)
+                   (physics/update-bodies time-step)
                    (update-world time-step)))
         (do (swap! world assoc :leftover-time accumulated)
           (swap! world assoc :entities entities))))))
@@ -43,7 +43,8 @@
                       (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0))
                       (assoc-in [:components :render-component] (render/create-cube-component))
                       (assoc-in [:components :command-component] (input/->CommandComponent nil))
-                      (assoc-in [:components :input-component] (input/->InputComponent nil)))]
+                      (assoc-in [:components :input-component] (input/->InputComponent nil))
+                      (assoc-in [:components :body-component] (physics/->BodyComponent {:x 0 :y 0} {:x 0 :y 0})))]
     (render/add-to-backend backend test-cube)
     (js/document.addEventListener "keydown" input/handle-input)
     (swap! world assoc :prev-time js/Performance.now)
