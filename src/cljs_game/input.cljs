@@ -10,14 +10,14 @@
 (defonce input-queue (atom cljs.core/PersistentQueue.EMPTY))
 
 (defonce input-mapping (atom
-                    { "w" {:type :input :action :up :target :player
-                           :execute (fn [entity] (update-in entity [:components :position-component :y] - 10))}
-                     "a" {:type :input :action :left :target :player
-                          :execute (fn [entity] (update-in entity [:components :position-component :x] - 10))}
-                     "s" {:type :input :action :down :target :player
-                          :execute (fn [entity] (update-in entity [:components :position-component :y] + 10))}
-                     "d" {:type :input :action :right :target :player
-                          :execute (fn [entity] (update-in entity [:components :position-component :x] + 10))}}))
+                         {"w" {:type :input :action :up :target :player
+                               :execute (fn [entity] (update-in entity [:components :position-component :y] - 10))}
+                          "a" {:type :input :action :left :target :player
+                               :execute (fn [entity] (update-in entity [:components :position-component :x] - 10))}
+                          "s" {:type :input :action :down :target :player
+                               :execute (fn [entity] (update-in entity [:components :position-component :y] + 10))}
+                          "d" {:type :input :action :right :target :player
+                               :execute (fn [entity] (update-in entity [:components :position-component :x] + 10))}}))
 
 (defn ^:export handle-input [event]
   (let [key (.-key event)
@@ -39,9 +39,9 @@
   (let [command (peek @input-queue)]
     (if (and command (> attempts 0))
       (do (swap! input-queue pop)
-          (pull-from-input
-           (conj command-stream command)
-           (dec attempts)))
+        (pull-from-input
+          (conj command-stream command)
+          (dec attempts)))
       command-stream)))
 
 (defn ^:export process-input [entities]
