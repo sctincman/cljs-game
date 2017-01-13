@@ -1,5 +1,5 @@
 (ns cljs-game.input
-  (:require [cljs-game.ecs :as ecs]))
+  (:require [cljs-game.entity :as ecs]))
 
 (enable-console-print!)
 
@@ -7,9 +7,9 @@
 
 (defrecord CommandComponent [commands])
 
-(def input-queue (atom cljs.core/PersistentQueue.EMPTY))
+(defonce input-queue (atom cljs.core/PersistentQueue.EMPTY))
 
-(def input-mapping (atom
+(defonce input-mapping (atom
                     { "w" {:type :input :action :up :target :player
                            :execute (fn [entity] (update-in entity [:components :position-component :y] - 10))}
                      "a" {:type :input :action :left :target :player

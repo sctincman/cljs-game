@@ -4,13 +4,11 @@
 
 (defn gen-page-head
   "Generates common headers given a page-title, returned as a hiccup style vector."
-  [title is-debug]
+  [title]
   [:head
    [:title (str title)]
    (hic-p/include-css "/css/styling.css")
-   (if is-debug
-     (hic-p/include-js "/js/main.js")
-     (hic-p/include-js "/js/main.min.js"))])
+   (hic-p/include-js "/js/main.min.js")])
 
 (def footer-bar
   "Generates the footer common to the application. Returns a hiccup style vector."
@@ -22,11 +20,11 @@
 
 (defn home-page
   "View for the home page. Returns hiccup formatted HTML5."
-  [is-debug]
+  []
   (hic-p/html5
-    (gen-page-head "Home" is-debug)
+    (gen-page-head "Home")
     [:body
-     [:h1 (str "Home" (when is-debug (str " (Debug): " is-debug)))]
+     [:h1 (str "Home")]
      [:p "CLJS webapp game thing."]
      footer-bar]
     [:script

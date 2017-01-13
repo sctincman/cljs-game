@@ -1,16 +1,17 @@
 (ns cljs-game.core
   (:require [cljs-game.render :as render]
             [cljs-game.input :as input]
-            [cljs-game.ecs :as ecs]))
+            [cljs-game.entity :as ecs]))
 
 (enable-console-print!)
 
-(def world (atom {:accum-time 0.0
+(defonce ^:export world (atom {:accum-time 0.0
+                  :prev-time 0.0
                   :running true
                   :entities []}))
 
 (defn update-world
-  [delta-time]
+  [delta-time entities]
   )
 
 (defn game-loop
@@ -29,8 +30,8 @@
                     attempts 10]
                (if (and (>= accumulated time-step)
                         (>= attempts 0))
-                 (do (update-world time-step)
-                     (recur (- accumulated time-step) (dec attempts)))
+                 (do (update-world time-step (:entities @world))
+                   (recur (- accumulated time-step) (dec attempts)))
                  accumulated))))))
 
 (defn ^:export init-game []
@@ -59,3 +60,5 @@
                     (render/render backend (:entities @world)))]
       (animate js/Performance.now))))
 
+(defn on-js-reload []
+  (println "Figwheel: reloaded!"))

@@ -1,5 +1,5 @@
 (ns cljs-game.render
-  (:require [cljs-game.ecs :as ecs]
+  (:require [cljs-game.entity :as ecs]
             [threejs :as three]))
 
 (defrecord RenderComponent [mesh material geometry])

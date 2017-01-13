@@ -5,7 +5,7 @@
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]))
 
 (defroutes app-routes
-  (GET "/" {{is-debug "debug"} :query-params} (views/home-page is-debug))
+  (GET "/" {{is-debug "debug"} :query-params} (views/home-page))
   (route/not-found "Not Found"))
 
 (def app

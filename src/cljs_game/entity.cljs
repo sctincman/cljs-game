@@ -1,4 +1,5 @@
-(ns cljs-game.ecs)
+(ns cljs-game.entity
+  (:require ))
 
 (defprotocol ^:export Entity)
 
