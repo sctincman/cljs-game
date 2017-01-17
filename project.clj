@@ -38,7 +38,7 @@
                                                          :provides  ["threejs"]
                                                          :module-type :es6}]
                                          :externs ["resources/libs/externs.js"]
-                                         :optimizations :simple ;;grr threejs...
+                                         :optimizations :simple ;grr threejs not compatible with anything higher...
                                          :pretty-print false
                                          :language-in :ecmascript5
                                          :language-out :ecmascript5}}}}
@@ -53,5 +53,5 @@
                         [com.cemerick/piggieback "0.2.1"]]
          :source-paths ["src" "dev"]
          :repl-options {; for nREPL dev you really need to limit output
-                         :init (set! *print-length* 50)
-                         :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}})
+                        :init (set! *print-length* 50)
+                        :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}})

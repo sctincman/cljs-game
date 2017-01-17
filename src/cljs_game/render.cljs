@@ -2,9 +2,8 @@
   (:require [cljs-game.entity :as ecs]
             [threejs :as three]))
 
-(defrecord RenderComponent [mesh material geometry])
+(defrecord RenderComponent [backend])
 
-;; Hmm, we could use instance? but this works
 (defn renderable? [entity]
   (and (:render-component (:components entity))
        (:position-component (:components entity))))
@@ -18,7 +17,7 @@
 (defrecord ^:export ThreeJSBackend [renderer scene camera objects]
   RenderBackend
   (add-to-backend [this entity]
-    (.add scene (get-in entity [:components :render-component :mesh]))
+    (.add scene (get-in entity [:components :render-component :backend :mesh]))
     entity)
   (render [this entities]
     (let [entities (doall (prepare-scene this entities))]
@@ -26,16 +25,16 @@
       entities))
   (prepare-scene [this entities]
     (let [renderables (filter renderable? entities)
-          rest (remove renderable? entities)]
-      (concat rest
+          xs (remove renderable? entities)]
+      (concat xs
               (map (fn [renderable]
-                     (set! (.-x (.-position (:mesh (:render-component (:components renderable)))))
-                           (:x (:position-component (:components renderable))))
-                     (set! (.-y (.-position (:mesh (:render-component (:components renderable)))))
-                           (:y (:position-component (:components renderable)))))
+                     (set! (.-x (.-position (get-in renderable [:components :render-component :backend :mesh])))
+                           (get-in renderable [:components :position-component :x]))
+                     (set! (.-y (.-position (get-in renderable [:components :render-component :backend :mesh])))
+                           (get-in renderable [:components :position-component :y])))
                    renderables)))))
 
-(defn ^:export create-threejs-backend []
+(defn ^:export create-threejs-backend! []
   (let [scene (three/Scene.)
         camera (three/PerspectiveCamera. 75 (/ js/window.innerWidth js/window.innerHeight) 0.1, 1000)
         renderer (three/WebGLRenderer.)
@@ -53,5 +52,5 @@
   (let [geometry (three/BoxGeometry. 200 200 200)
         material (three/MeshStandardMaterial. (js-obj "color" 0xff0040 "wireframe" false))
         mesh (three/Mesh. geometry material)
-        render-component (->RenderComponent mesh material geometry)]
+        render-component (->RenderComponent {:mesh mesh, :material material, :geometry geometry})]
     render-component))

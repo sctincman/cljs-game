@@ -28,10 +28,10 @@
      "h" {:type :input :action :right :target :player
           :execute (fn [entity] (update-in entity [:components :body-component :acceleration :x] + 0.01))}}))
 
-(defn ^:export handle-input [event]
+(defn ^:export handle-input! [event]
   (let [key (.-key event)
         command (@input-mapping key)]
-    (when (not (.-repeat event)))
+    (when-not (.-repeat event))
     (when command
       (if (= :player (:target command))
         (swap! input-queue conj (@input-mapping key))
@@ -42,34 +42,36 @@
        (:command-component (:components entity))))
 
 (defn commandable? [entity]
-  (:command-component (:components entity)))
+  (some? (:command-component (:components entity))))
 
-(defn pull-from-input [command-stream attempts]
+(defn pull-from-input! [command-stream attempts]
   (let [command (peek @input-queue)]
-    (if (and command (> attempts 0))
+    (if (and (pos? attempts)
+             (some? command))
       (do (swap! input-queue pop)
-        (pull-from-input
+        (pull-from-input!
           (conj command-stream command)
           (dec attempts)))
       command-stream)))
 
 (defn ^:export process-input [entities]
   (let [controllables (filter controllable? entities)
-        rest (remove controllable? entities)
-        commands (pull-from-input nil 10)]
-    (concat rest
+        xs (remove controllable? entities)
+        commands (pull-from-input! nil 10)]
+    (concat xs
             (map (fn [entity] (update-in entity [:components :command-component :commands] concat commands))
                  controllables))))
 
+(defn perform-commands [entity]
+  (-> (reduce (fn [entity command]
+                (when (:execute command)
+                  ((:execute command) entity)))
+              entity
+              (get-in entity [:components :command-component :commands]))
+      (assoc-in [:components :command-component :commands] nil)))
+
 (defn ^:export process-commands [entities]
   (let [commandables (filter commandable? entities)
-        rest (remove commandable? entities)]
-    (concat rest
-            (map (fn [entity]
-                   (-> (reduce (fn [entity command]
-                                 (when (:execute command)
-                                   ((:execute command) entity)))
-                               entity
-                               (:commands (:command-component (:components entity))))
-                       (assoc-in [:components :command-component :commands] nil)))
-                 commandables))))
+        xs (remove commandable? entities)]
+    (concat xs
+            (map perform-commands commandables))))
