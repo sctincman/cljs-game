@@ -4,6 +4,8 @@
 
 (defrecord RenderComponent [backend])
 
+(defrecord ScaleComponent [x y z])
+
 (defn renderable? [entity]
   (and (:render-component (:components entity))
        (:position-component (:components entity))))
@@ -54,15 +56,19 @@
 (defn ^:export create-cube-component []
   (let [geometry (three/BoxGeometry. 200 200 200)
         material (three/MeshStandardMaterial. (js-obj "color" 0xff0040 "wireframe" false))
-        mesh (three/Mesh. geometry material)
-        render-component (->RenderComponent {:mesh mesh, :material material, :geometry geometry})]
-    render-component))
+        mesh (three/Mesh. geometry material)]
+    (->RenderComponent {:mesh mesh, :material material, :geometry geometry})))
 
-(defn ^:export create-sprite-component [image-url]
-  (let [loader (three/TextureLoader.)
-        map (.load loader image-url)
-        material (three/SpriteMaterial. (js-obj "map" map "color" 0xffffff))
-        sprite (three/Sprite. material)]
-    (set! (.-x (.-scale sprite)) 100.0)
-    (set! (.-y (.-scale sprite)) 100.0)
+;; Because Three.js loads the texture asynchronously, we cannot get the default scale at creation, and need to use this annoying workaround
+;; (Yay closures!)
+(defn ^:export create-sprite-component! [image-url]
+  (let [material (three/SpriteMaterial.)
+        sprite (three/Sprite. material)
+        loader (three/TextureLoader.)]
+    (.load loader image-url
+           (fn [texture]
+             (set! (.-map material) texture)
+             (set! (.-x (.-scale sprite)) (.-width (.-image texture)))
+             (set! (.-y (.-scale sprite)) (.-height (.-image texture)))
+             (set! (.-needsUpdate material) true)))
     (->RenderComponent {:mesh sprite, :material material})))
