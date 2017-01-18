@@ -2,7 +2,7 @@
   :description "CLJS based WebGL game engine"
   :url "http://github.com/sctincman/cljs-game"
   :min-lein-version "2.0.0"
-  :source-paths ["src"]
+  :source-paths ["src/"]
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [compojure "1.5.1"]
                  [ring/ring-defaults "0.2.1"]
@@ -10,6 +10,7 @@
                  [org.clojure/core.async "0.2.391"
                   :exclusions [org.clojure/tools.reader]]]
   :plugins [[lein-ring "0.9.7"]
+            [lein-codox "0.10.2"]
             [lein-figwheel "0.5.8"]
             [lein-cljsbuild "1.1.5" :exclusions [[org.clojure/clojure]]]]
   :hooks [leiningen.cljsbuild]
@@ -44,6 +45,12 @@
                                          :language-out :ecmascript5}}}}
   :clean-targets ^{:protect false} ["resources/public/js/build-dev" "target"]
   :figwheel {:css-dirs ["resources/public/css"]}
+  :codox {:language :clojurescript
+          :output-path "resources/public/doc"
+          :source-uri "https://github.com/sctincman/cljs-game/blob/{version}/{filepath}#L{line}"
+          ;; Be explicit that undocumented public fns should be documented
+          :metadata {:doc "TODO: Add docstring"
+                     :doc/format :markdown}}
   :ring {:handler cljs-game.handler/app}
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
