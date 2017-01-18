@@ -11,4 +11,4 @@
 
 (defrecord ^:export Component [name])
 
-(defrecord ^:export PositionComponent [x y])
+(defrecord ^:export PositionComponent [x y z])

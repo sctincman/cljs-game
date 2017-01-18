@@ -41,11 +41,11 @@
 (defn ^:export js-start-game! []
   (let [backend (render/create-threejs-backend!)
         test-sprite (-> (ecs/->Entity 42 {})
-                      (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0))
+                      (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0 0))
                       (assoc-in [:components :render-component] (render/create-sprite-component "assets/images/placeholder.png"))
                       (assoc-in [:components :command-component] (input/->CommandComponent nil))
                       (assoc-in [:components :input-component] (input/->InputComponent nil))
-                      (assoc-in [:components :body-component] (physics/->BodyComponent {:x 0 :y 0} {:x 0 :y 0})))]
+                      (assoc-in [:components :body-component] (physics/->BodyComponent {:x 0 :y 0 :z 0} {:x 0 :y 0 :z 0})))]
     (render/add-to-backend backend test-sprite)
     (js/document.addEventListener "keydown" input/handle-input!)
     (swap! world assoc :prev-time js/Performance.now)

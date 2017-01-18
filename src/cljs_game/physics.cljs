@@ -11,8 +11,10 @@
   (-> body
       (update-in [:components :position-component :x] + (* delta-t (get-in body [:components :body-component :velocity :x])))
       (update-in [:components :position-component :y] + (* delta-t (get-in body [:components :body-component :velocity :y])))
+      (update-in [:components :position-component :z] + (* delta-t (get-in body [:components :body-component :velocity :z])))
       (update-in [:components :body-component :velocity :x] + (* delta-t (get-in body [:components :body-component :acceleration :x])))
-      (update-in [:components :body-component :velocity :y] + (* delta-t (get-in body [:components :body-component :acceleration :y])))))
+      (update-in [:components :body-component :velocity :y] + (* delta-t (get-in body [:components :body-component :acceleration :y])))
+      (update-in [:components :body-component :velocity :z] + (* delta-t (get-in body [:components :body-component :acceleration :z])))))
 
 (defn ^:export update-bodies
   [entities delta-t]

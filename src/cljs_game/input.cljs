@@ -19,6 +19,10 @@
           :execute (fn [entity] (update-in entity [:components :body-component :velocity :y] - 0.5))}
      "d" {:type :input :action :right :target :player
           :execute (fn [entity] (update-in entity [:components :body-component :velocity :x] + 0.5))}
+     "q" {:type :input :action :forward :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :velocity :z] - 0.5))}
+     "e" {:type :input :action :backward :target :player
+          :execute (fn [entity] (update-in entity [:components :body-component :velocity :z] + 0.5))}
      "t" {:type :input :action :up :target :player
           :execute (fn [entity] (update-in entity [:components :body-component :acceleration :y] + 0.01))}
      "f" {:type :input :action :left :target :player

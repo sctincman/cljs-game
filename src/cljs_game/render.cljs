@@ -31,7 +31,9 @@
                      (set! (.-x (.-position (get-in renderable [:components :render-component :backend :mesh])))
                            (get-in renderable [:components :position-component :x]))
                      (set! (.-y (.-position (get-in renderable [:components :render-component :backend :mesh])))
-                           (get-in renderable [:components :position-component :y])))
+                           (get-in renderable [:components :position-component :y]))
+                     (set! (.-z (.-position (get-in renderable [:components :render-component :backend :mesh])))
+                           (get-in renderable [:components :position-component :z])))
                    renderables)))))
 
 (defn ^:export create-threejs-backend! []
