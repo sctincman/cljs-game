@@ -42,6 +42,7 @@
         light2 (three/PointLight. 0xffffff 2 0)]
     (set! (.-z (.-position camera)) 900)
     (.add scene light)
+    (set! (.-background scene) (three/Color. 0x6c6c6c))
     (.set (.-position light2) 300 300 300)
     (.add scene light2)
     (.setSize renderer js/window.innerWidth js/window.innerHeight)
@@ -54,3 +55,12 @@
         mesh (three/Mesh. geometry material)
         render-component (->RenderComponent {:mesh mesh, :material material, :geometry geometry})]
     render-component))
+
+(defn ^:export create-sprite-component [image-url]
+  (let [loader (three/TextureLoader.)
+        map (.load loader image-url)
+        material (three/SpriteMaterial. (js-obj "map" map "color" 0xffffff))
+        sprite (three/Sprite. material)]
+    (set! (.-x (.-scale sprite)) 100.0)
+    (set! (.-y (.-scale sprite)) 100.0)
+    (->RenderComponent {:mesh sprite, :material material})))
