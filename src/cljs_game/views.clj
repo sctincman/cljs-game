@@ -30,6 +30,6 @@
     [:script
      "document.onreadystatechange = function () {
         if (document.readyState === \"complete\") {
-          cljs_game.core.init_game()
+          cljs_game.core.js_start_game_BANG_();
         }
       }"]))
