@@ -8,7 +8,9 @@
                  [ring/ring-defaults "0.2.1"]
                  [org.clojure/clojurescript "1.9.293"]
                  [org.clojure/core.async "0.2.391"
-                  :exclusions [org.clojure/tools.reader]]]
+                  :exclusions [org.clojure/tools.reader]]
+                 [org.clojure/data.json "0.2.6"]
+                 [cljs-ajax "0.5.8"]]
   :plugins [[lein-ring "0.9.7"]
             [lein-codox "0.10.2"]
             [lein-figwheel "0.5.8"]

@@ -49,9 +49,13 @@
                       (assoc-in [:components :body-component] (physics/->BodyComponent {:x 0 :y 0 :z 0} {:x 0 :y 0 :z 0})))
         test-cube (-> (ecs/->Entity 43 {})
                       (assoc-in [:components :position-component] (ecs/->PositionComponent -400 100 20))
-                      (assoc-in [:components :render-component] (render/create-cube-component)))]
+                      (assoc-in [:components :render-component] (render/create-cube-component)))
+        background (-> (ecs/->Entity 0 {})
+                       (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0 -20))
+                       (assoc-in [:components :render-component] (render/create-sprite-component! "assets/images/test-background.png")))]
     (render/add-to-backend backend test-sprite)
     (render/add-to-backend backend test-cube)
+    (render/add-to-backend backend background)
     (js/document.addEventListener "keydown" input/handle-input!)
     (swap! world assoc :prev-time js/Performance.now)
     (swap! world assoc :entities [test-cube test-sprite])
