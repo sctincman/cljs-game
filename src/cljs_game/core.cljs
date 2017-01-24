@@ -2,7 +2,8 @@
   (:require [cljs-game.render :as render]
             [cljs-game.input :as input]
             [cljs-game.entity :as ecs]
-            [cljs-game.physics :as physics]))
+            [cljs-game.physics :as physics]
+            [cljs-game.scene :as scene]))
 
 (enable-console-print!)
 
@@ -62,7 +63,9 @@
     (swap! input/input-mapping assoc "i" {:type :input
                                           :action :info
                                           :target :none
-                                          :execute (fn [] (println @world))})
+                                          :execute (fn [] (println @world)
+                                                     (let [ascene (scene/->ThreeJSScene nil nil nil)]
+                                                       (scene/load-entity! ascene "assets/entities/placeholders.json")))})
     (swap! input/input-mapping assoc "p" {:type :input
                                           :action :pause
                                           :target :world

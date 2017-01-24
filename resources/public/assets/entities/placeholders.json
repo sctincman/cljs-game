@@ -1,0 +1,17 @@
+[{"name": "test-background",
+  "position": {"x": 0, "y": 0, "z": -10},
+  "sprite": "test-background.png"},
+
+ {"name": "placeholder-cube",
+  "position": {"x": -400, "y": 100, "z": 100},
+  "mesh": {"geom": "cube", "size": 200, "material": "default"}},
+
+ {"name": "placeholder-player",
+  "position": {"x": 0, "y": 0, "z": 0},
+  "sprite": "placeholder.png",
+  "command": true,
+  "input": true,
+  "body": {"velocity": {"x": 0, "y": 0, "z": 0},
+           "acceleration": {"x": 0, "y": 0, "z": 0}
+          }}
+]
