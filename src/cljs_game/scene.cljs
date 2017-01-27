@@ -11,7 +11,7 @@
   Scene
   (load-entities!
     [this uri]
-    (let [entity (ecs/->Entity 0 {})]
+    (let [entity (ecs/->Entity 0 {} {})]
       (ajax/GET uri {:response-format :json
                      :handler (fn [response]
                                 ;;pullout json
