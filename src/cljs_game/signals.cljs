@@ -11,46 +11,66 @@
   (propagate [this value] "Pushs a new value to consumers.")
   (value [this] "Returns the current value of the signal."))
 
-(defrecord Signal [value]
-  "An unbuffered signal encapsulating a current value. This implementation is backed by an `atom`"
+;; "An unbuffered signal encapsulating a current value backed by an `atom`.
+(defrecord Signal [value tag]
   ISignal
-  ;; Possibly have watch wrap the handler and not pass the ref, to avoid bad mutation
-  ;; further more, consider how best to use the "key" in add-watch...
   (watch [this target handler]
-    (add-watch value target handler))
+    (add-watch value target
+               (fn [key ref old new]
+                 (handler key old new))))
   (propagate [this new-value]
     (swap! value (fn [old new] new) new-value))
   (value [this]
     @value))
 
 ;; For now, let's do just single values, later update to have abuffer (but queue for value doesn't work, removing value will trigger watches)
+;; TODO, keyword args? (want to set prefix, don't care about init
 (defn ^:export signal
-  "Creates a new, unbuffered signal with an optional initial value (defaults to `nil`)."
+  "Creates a new, unbuffered `atom` based signal with an optional initial value (defaults to `nil`), and optional tag prefix."
   ([] (signal nil))
-  ([init] (->Signal (atom init))))
+  ([init] (->Signal (atom init) (keyword (gensym "signal_"))))
+  ([init prefix] (->Signal (atom init) (keyword (gensym prefix)))))
 
 ;; Watchers call the outputs!
 ;; Don't return values, return signals
-(defn foldp
-  "Fold from past. Creates a new `Signal` that reduces over an input `Signal`, outputting the accumulated results into an output `Signal`. `f` is a reducing function that takes 2 arguments: an accumulated state (current value of output `Signal`), and the current value of the input `Signal`. The return value becomes the new value of the output `Signal`.`init` is a starting value for the output `Signal`. `in-signal` is the input `Signal`. Returns the output `Signal`, allowing others to subscribe and consume from it."
+(defn ^:export foldp
+  "Fold from past. Returns a new `Signal` that is the result of reduceing over an input `Signal` with the supplied function. `f` is a reducing function that takes 2 arguments: an accumulated state (current value of output `Signal`), and the current value of the input `Signal`. The return value becomes the new value of the output `Signal`.`init` is a starting value for the output `Signal`. `in-signal` is the input `Signal`. Returns the output `Signal`, allowing others to subscribe and consume from it."
   [f init in-signal]
-  (let [out-signal (signal init)]
-    (watch in-signal :any
-           (fn [target signal old-state new-state]
+  (let [out-signal (signal init "foldp")]
+    (watch in-signal (:tag out-signal)
+           (fn [target old-state new-state]
              (propagate out-signal (f (value out-signal) new-state))))
     out-signal))
 
 ;; I have no idea what this would be used for, but could be something fun!
 ;(defn foldf [fn in-signal])
 
+;; expand to arbitrary amounts of in-signals when I can figure out how to handle the asynchronous nature...
+;;; When one signal arrives, but others are unchanging, what is the behavior?
+;;;; 1) Output new value with all signal inputs as-is (one changes changes out)
+;;;; 2) Wait for all signals to change (must keep track of all signals...)
+(defn- map*
+  "Returns a new signal that is the application of `f` to all the input signals. Must match the arity of the number of input signal."
+  [f in-signal]
+  (let [out-signal (signal nil "map")]
+    (watch in-signal (:tag out-signal)
+           (fn [target old-state new-state]
+             (propagate out-signal (f new-state))))
+    out-signal))
+
+;; TODO, mechanism to removeEventListener? Grr Javascript wants the original func object
+;;; Possibly, store the anon func as the tag in the outsignal? Otherwise make another field in signal :/
 (defn keyboard
   "Returns a signal generated from keyboard events. Optionally accepts a function to transform the raw Javascript event before propagating."
   ([] (keyboard identity))
   ([transformer]
-   (let [out-signal (signal)]
+   (let [out-signal (signal nil "keyboard")]
      (.addEventListener
       js/document
       "keydown"
       (fn [event]
         (propagate out-signal (transformer event))))
      out-signal)))
+
+;; exports
+(def ^:export map map*)

@@ -63,8 +63,13 @@
                     (fn [acc x] (inc acc))
                     0
                     (signals/keyboard))
-                   :bah
-                   (fn [k r o n] (println "Keycount from signals: " n)))
+                   :count-keys
+                   (fn [k o n] (println k " from signals: " o "->" n)))
+    (signals/watch (signals/map
+                    (fn [event] (.-key event))
+                    (signals/keyboard))
+                   :extract-key
+                   (fn [k o n] (println k ": " o "->" n)))
     (swap! world assoc :prev-time js/Performance.now)
     (swap! world assoc :entities [test-cube test-sprite])
     (swap! input/input-mapping assoc "i" {:type :input
