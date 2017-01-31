@@ -60,7 +60,7 @@
 
 ;; TODO, mechanism to removeEventListener? Grr Javascript wants the original func object
 ;;; Possibly, store the anon func as the tag in the outsignal? Otherwise make another field in signal :/
-(defn keyboard
+(defn ^:export keyboard
   "Returns a signal generated from keyboard events. Optionally accepts a function to transform the raw Javascript event before propagating."
   ([] (keyboard identity))
   ([transformer]
@@ -70,6 +70,29 @@
       "keydown"
       (fn [event]
         (propagate out-signal (transformer event))))
+     out-signal)))
+
+(defn ^:export frames
+  "Returns a signal that triggers when a new frame needs to be rendered, with the value of the absolute time. CLJS uses `requestAnimationFrame`."
+  []
+  (let [out-signal (signal (system-time) "frames")]
+    (letfn [(callback [time]
+              (propagate out-signal time)
+              (.requestAnimationFrame js/window callback))]
+      (callback (system-time))
+      out-signal)))
+
+;;TODO setTimeout version for an AS FAST AS POSSIBLE callback?
+;;TODO special `Time` Signal that triggers every delay, but whose value is the current time at observation?
+;;TODO handle to removeInterval...
+(defn ^:export tick
+  "Returns a signal that triggers every `delay` milliseconds. Defaults to 0 ms (as fast as possible). CLJS uses `setInterval` and is thus limited to a 10 ms minimum delay."
+  ([] (tick 0.0))
+  ([delay]
+   (let [out-signal (signal (system-time) "time")]
+     (.setInterval js/window
+                   (fn [] (propagate out-signal (system-time)))
+                   delay)
      out-signal)))
 
 ;; exports
