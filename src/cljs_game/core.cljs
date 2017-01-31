@@ -70,12 +70,19 @@
                     (signals/keyboard))
                    :extract-key
                    (fn [k o n] (println k ": " o "->" n)))
-    (signals/watch (signals/tick 1000)
-                   :timed
+    (comment (signals/watch (signals/tick 1000)
+                            :timed
+                            (fn [k o n] (println k ": " o "->" n))))
+    (signals/watch (signals/filter
+                    (fn [k] (= k "s"))
+                    (signals/map
+                     (fn [event] (.-key event))
+                     (signals/keyboard)))
+                   :only-s
                    (fn [k o n] (println k ": " o "->" n)))
-    (signals/watch (signals/frames)
-                   :frames
-                   (fn [k o n] (println k ": " o "->" n)))
+    (comment (signals/watch (signals/frames)
+                            :frames
+                            (fn [k o n] (println k ": " o "->" n))))
     (swap! world assoc :prev-time js/Performance.now)
     (swap! world assoc :entities [test-cube test-sprite])
     (swap! input/input-mapping assoc "i" {:type :input

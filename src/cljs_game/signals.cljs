@@ -50,12 +50,33 @@
 ;;;; 1) Output new value with all signal inputs as-is (one changes changes out)
 ;;;; 2) Wait for all signals to change (must keep track of all signals...)
 (defn- map*
-  "Returns a new signal that is the application of `f` to all the input signals. Must match the arity of the number of input signal."
   [f in-signal]
   (let [out-signal (signal nil "map")]
     (watch in-signal (:tag out-signal)
            (fn [target old-state new-state]
              (propagate out-signal (f new-state))))
+    out-signal))
+
+;; Hmm, how best to handle the tag for watching? Currently use true-signal, but I don't like decoupling them and relying on one.
+(defn ^:export split
+  "Splits signal by `pred`. Returns two signals, one for values that pass, and one for those that fail. Return value is a map {:true true-signal, :false false-signal}, that can be destructured."
+  [pred in-signal]
+  (let [true-signal (signal nil "split-true")
+        false-signal (signal nil "split-false")]
+    (watch in-signal (:tag true-signal)
+           (fn [target old-state new-state]
+             (if (pred new-state)
+               (propagate true-signal new-state)
+               (propagate false-signal new-state))))
+    {:true true-signal, :false false-signal}))
+
+(defn- filter*
+  [pred in-signal]
+  (let [out-signal (signal nil "filter")]
+    (watch in-signal (:tag out-signal)
+           (fn [target old-state new-state]
+             (when (pred new-state)
+               (propagate out-signal new-state))))
     out-signal))
 
 ;; TODO, mechanism to removeEventListener? Grr Javascript wants the original func object
@@ -96,4 +117,10 @@
      out-signal)))
 
 ;; exports
-(def ^:export map map*)
+(def ^:export map
+  "Returns a new signal that is the application of `f` to all the input signals. Must match the arity of the number of input signal."
+  map*)
+
+(def ^:export filter
+  "Returns a new signal that with values from `in-signal` that satisfy `pred`."
+  filter*)
