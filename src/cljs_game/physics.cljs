@@ -18,8 +18,8 @@
 
 (defn ^:export update-bodies
   [entities delta-t]
-  (let [bodies (filter physical? entities)
-        xs (remove physical? entities)]
-    (concat xs
-            (map (fn [body] (propagate body delta-t))
-                 bodies))))
+  (map (fn [entity]
+         (if (physical? entity)
+           (propagate entity delta-t)
+           entity))
+       entities))

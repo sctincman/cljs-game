@@ -28,17 +28,17 @@
         (.render renderer scene ortho-camera))
       entities))
   (prepare-scene [this entities]
-    (let [renderables (filter renderable? entities)
-          xs (remove renderable? entities)]
-      (concat xs
-              (map (fn [renderable]
-                     (set! (.-x (.-position (get-in renderable [:components :render-component :backend :mesh])))
-                           (get-in renderable [:components :position-component :x]))
-                     (set! (.-y (.-position (get-in renderable [:components :render-component :backend :mesh])))
-                           (get-in renderable [:components :position-component :y]))
-                     (set! (.-z (.-position (get-in renderable [:components :render-component :backend :mesh])))
-                           (get-in renderable [:components :position-component :z])))
-                   renderables)))))
+    (map (fn [entity]
+           (if (renderable? entity)
+             (do
+               (set! (.-x (.-position (get-in entity [:components :render-component :backend :mesh])))
+                     (get-in entity [:components :position-component :x]))
+               (set! (.-y (.-position (get-in entity [:components :render-component :backend :mesh])))
+                     (get-in entity [:components :position-component :y]))
+               (set! (.-z (.-position (get-in entity [:components :render-component :backend :mesh])))
+                     (get-in entity [:components :position-component :z])))
+             entity))
+         entities)))
 
 (defn ^:export create-threejs-backend! []
   (let [scene (three/Scene.)

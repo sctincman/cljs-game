@@ -1,5 +1,6 @@
 (ns cljs-game.input
-  (:require [cljs-game.entity :as ecs]))
+  (:require [cljs-game.entity :as ecs]
+            [cljs-game.signals :as s]))
 
 (enable-console-print!)
 
@@ -59,23 +60,25 @@
       command-stream)))
 
 (defn ^:export process-input [entities]
-  (let [controllables (filter controllable? entities)
-        xs (remove controllable? entities)
-        commands (pull-from-input! nil 10)]
-    (concat xs
-            (map (fn [entity] (update-in entity [:components :command-component :commands] concat commands))
-                 controllables))))
+  (let [commands (pull-from-input! nil 10)]
+    (map (fn [entity]
+           (if (controllable? entity)
+             (update-in entity [:components :command-component :commands] concat commands)
+             entity))
+         entities)))
 
 (defn perform-commands [entity]
   (-> (reduce (fn [entity command]
-                (when (:execute command)
-                  ((:execute command) entity)))
+                (if (:execute command)
+                  ((:execute command) entity)
+                  entity))
               entity
               (get-in entity [:components :command-component :commands]))
       (assoc-in [:components :command-component :commands] nil)))
 
 (defn ^:export process-commands [entities]
-  (let [commandables (filter commandable? entities)
-        xs (remove commandable? entities)]
-    (concat xs
-            (map perform-commands commandables))))
+  (map (fn [entity]
+         (if (commandable? entity)
+           (perform-commands entity)
+           entity))
+       entities))
