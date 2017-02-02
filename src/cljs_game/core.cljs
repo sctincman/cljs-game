@@ -87,7 +87,7 @@
                      state-signal)
                    (signals/foldp step-world
                                   {:entities [test-cube test-sprite background]}
-                                  (signals/delta-time (signals/tick 8.0)))
+                                  (signals/delta-time (signals/tick 16.0)))
                    (signals/delta-time (signals/frames)))))
 
 (defn on-js-reload []

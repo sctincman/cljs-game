@@ -19,7 +19,7 @@
                (fn [key ref old new]
                  (handler key old new))))
   (propagate [this new-value]
-    (swap! value (fn [old new] new) new-value))
+    (reset! value new-value))
   (value [this]
     @value))
 
