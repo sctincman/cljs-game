@@ -9,37 +9,20 @@
 (enable-console-print!)
 
 (defonce ^:export world
-  (atom {:accum-time 0.0
-         :prev-time 0.0
-         :running true
-         :perspective true
-         :entities []}))
+  {:running true
+   :perspective true
+   :entities []})
 
-(defn update-world
+(defn step-entities
   [entities delta-time]
-  entities)
+  (doall (-> entities
+             (input/process-input)
+             (input/process-commands)
+             (physics/update-bodies delta-time))))
 
-(defn game-loop!
-  [now]
-  (let [prev (:prev-time @world)
-        leftover-time (:accum-time @world)
-        time-step 16.0]
-    (swap! world assoc :prev-time now)
-    (loop [accumulated (+ leftover-time (- now prev))
-           attempts 10
-           entities (:entities @world)]
-      (if (and (>= accumulated time-step)
-               (pos? attempts)
-               (:running @world))
-        (recur (- accumulated time-step)
-               (dec attempts)
-               (-> entities
-                   (input/process-input)
-                   (input/process-commands)
-                   (physics/update-bodies time-step)
-                   (update-world time-step)))
-        (do (swap! world assoc :leftover-time accumulated)
-          (swap! world assoc :entities entities))))))
+(defn step-world
+  [state delta-time]
+  (update state :entities #(step-entities % delta-time)))
 
 (defn ^:export js-start-game! []
   (let [backend (render/create-threejs-backend!)
@@ -59,51 +42,53 @@
     (render/add-to-backend backend test-cube)
     (render/add-to-backend backend background)
     (js/document.addEventListener "keydown" input/handle-input!)
-    (signals/watch (signals/foldp
-                    (fn [acc x] (inc acc))
-                    0
-                    (signals/keyboard))
-                   :count-keys
-                   (fn [k o n] (println k " from signals: " o "->" n)))
-    (signals/watch (signals/map
-                    (fn [event] (.-key event))
-                    (signals/keyboard))
-                   :extract-key
-                   (fn [k o n] (println k ": " o "->" n)))
+    (comment (signals/watch (signals/foldp
+                             (fn [acc x] (inc acc))
+                             0
+                             (signals/keyboard))
+                            :count-keys
+                            (fn [k o n] (println k " from signals: " o "->" n))))
+    (comment (signals/watch (signals/map
+                             (fn [event] (.-key event))
+                             (signals/keyboard))
+                            :extract-key
+                            (fn [k o n] (println k ": " o "->" n))))
     (comment (signals/watch (signals/tick 1000)
                             :timed
                             (fn [k o n] (println k ": " o "->" n))))
-    (signals/watch (signals/filter
-                    (fn [k] (= k "s"))
-                    (signals/map
-                     (fn [event] (.-key event))
-                     (signals/keyboard)))
-                   :only-s
-                   (fn [k o n] (println k ": " o "->" n)))
+    (comment (signals/watch (signals/filter
+                             (fn [k] (= k "s"))
+                             (signals/map
+                              (fn [event] (.-key event))
+                              (signals/keyboard)))
+                            :only-s
+                            (fn [k o n] (println k ": " o "->" n))))
     (comment (signals/watch (signals/frames)
                             :frames
                             (fn [k o n] (println k ": " o "->" n))))
-    (swap! world assoc :prev-time js/Performance.now)
-    (swap! world assoc :entities [test-cube test-sprite])
-    (swap! input/input-mapping assoc "i" {:type :input
-                                          :action :info
-                                          :target :none
-                                          :execute (fn [] (println @world))})
-    (swap! input/input-mapping assoc "p" {:type :input
-                                          :action :pause
-                                          :target :world
-                                          :execute (fn [] (swap! world assoc :running
-                                                                 (not (@world :running))))})
-    (swap! input/input-mapping assoc "o" {:type :input
-                                          :action :perspective
-                                          :target :renderer
-                                          :execute (fn [] (swap! world assoc :perspective
-                                                                 (not (@world :perspective))))})
-    (let [animate (fn animate [current-time]
-                    (js/requestAnimationFrame animate)
-                    (game-loop! current-time)
-                    (render/render backend (:entities @world) (:perspective @world)))]
-      (animate js/Performance.now))))
+
+    (comment (swap! input/input-mapping assoc "i" {:type :input
+                                                   :action :info
+                                                   :target :none
+                                                   :execute (fn [] (println @world))}))
+    (comment (swap! input/input-mapping assoc "p" {:type :input
+                                                      :action :pause
+                                                      :target :world
+                                                      :execute (fn [] (swap! world assoc :running
+                                                                             (not (@world :running))))}))
+    (comment (swap! input/input-mapping assoc "o" {:type :input
+                                                   :action :perspective
+                                                   :target :renderer
+                                                   :execute (fn [] (swap! world assoc :perspective
+                                                                          (not (@world :perspective))))}))
+    ;;This... is our game loop!
+    (signals/foldp (fn [state-signal step]
+                     (render/render backend (:entities (signals/value state-signal)) true)
+                     state-signal)
+                   (signals/foldp step-world
+                                  {:entities [test-cube test-sprite background]}
+                                  (signals/delta-time (signals/tick 8.0)))
+                   (signals/delta-time (signals/frames)))))
 
 (defn on-js-reload []
   (println "Figwheel: reloaded!"))

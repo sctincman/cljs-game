@@ -103,6 +103,28 @@
       (callback (system-time))
       out-signal)))
 
+(defn ^:export timed
+  "Returns a signal that emits the time when the input-signal triggers."
+  [trigger-signal]
+  (let [out-signal (signal 0.0 "timed")]
+    (watch trigger-signal (:tag out-signal)
+           (fn [target old-state new-state]
+             (propagate out-signal (system-time))))
+    out-signal))
+
+(defn ^:export delta-time
+  "Returns a signal that emits the change in a time-signal."
+  [time-signal]
+  (let [out-signal (signal 0.0 "delta-t")]
+    (watch time-signal (:tag out-signal)
+           (fn [target old-state new-state]
+             (propagate out-signal (- new-state old-state))))
+    out-signal))
+
+;; how much time has passed between triggers?
+(comment (defn dt [in-signal]
+           (delta-time (timed in-signal))))
+
 ;;TODO setTimeout version for an AS FAST AS POSSIBLE callback?
 ;;TODO special `Time` Signal that triggers every delay, but whose value is the current time at observation?
 ;;TODO handle to removeInterval...
