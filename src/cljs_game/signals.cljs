@@ -79,6 +79,29 @@
                (propagate out-signal new-state))))
     out-signal))
 
+(defn ^:export route
+  "Given an input-signal, and sequence of predicates, returns a sequence of output-signals, each triggered when their predicate is true. Predicates are of arity 3, receving the target tag, old-state, and new-state from the input-signal, returning true if the signal should trigger the corresponding output-signal."
+  [input-signal & rest-args]
+  (let [routes (map (fn [pred]
+                      (when (fn? pred)
+                        {:signal (signal nil (str "route-" pred))
+                         :pred pred}))
+                    rest-args)]
+    (watch in-signal (:tag (:signal (first routes)))
+           (fn [target old-state new-state]
+             (map (fn [{signal :signal pred :pred}]
+                    (when (pred target old-state new-state)
+                      (propagate signal new-state)))
+                  routes)))
+    routes))
+
+(defn route*
+  [input-signal & rest-args]
+  (map (fn [pred]
+         (when (fn? pred)
+           (filter* pred input-signal)))
+       rest-args))
+
 ;; TODO, mechanism to removeEventListener? Grr Javascript wants the original func object
 ;;; Possibly, store the anon func as the tag in the outsignal? Otherwise make another field in signal :/
 (defn ^:export keyboard
