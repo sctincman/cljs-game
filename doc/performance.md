@@ -6,6 +6,12 @@ However, after the refactor the performance is much jerkier and less appealing.
 
 ## Pre-FRP profile
 
+I finally did this, and the performance isn't that much better. I saved the profile as `profiles/Timeline-prefrp-93f961ff85d29fca437ed971e5827139ecde140b.json'
+
+There is occaisionally a "long frame", which produces the slightest stutter effect. The `AnimationFrame` is around 1ms on avergage, with occasional 3ms long calls and the rare 5-7ms one (usually in a long frame).
+
+Heap usage is not that different from the inprogress Signals framework, and makes me less worried about my new approach. I think I am at a point I can barge forward, and optimize later.
+
 # Post FRP profiling
 
 I did a few timelines, and the majority of time is spent in the AnimateFrame event fireback.
