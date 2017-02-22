@@ -87,7 +87,7 @@
                         {:signal (signal nil (str "route-" pred))
                          :pred pred}))
                     rest-args)]
-    (watch in-signal (:tag (:signal (first routes)))
+    (watch input-signal (:tag (:signal (first routes)))
            (fn [target old-state new-state]
              (map (fn [{signal :signal pred :pred}]
                     (when (pred target old-state new-state)
@@ -104,6 +104,8 @@
 
 ;; TODO, mechanism to removeEventListener? Grr Javascript wants the original func object
 ;;; Possibly, store the anon func as the tag in the outsignal? Otherwise make another field in signal :/
+;; TODO listen for keypress/keyup events
+;;; Optionally debounce? (eg, weird repeat behavior on Linux)
 (defn ^:export keyboard
   "Returns a signal generated from keyboard events. Optionally accepts a function to transform the raw Javascript event before propagating."
   ([] (keyboard identity))

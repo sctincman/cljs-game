@@ -16,8 +16,7 @@
 (defn step-entities
   [entities delta-time]
   (doall (-> entities
-             (input/process-input)
-             (input/process-commands)
+             ;; perhaps instead have it watch the step-signal?
              (physics/update-bodies delta-time))))
 
 (defn step-world
@@ -29,9 +28,8 @@
         test-sprite (-> (ecs/->Entity 42 {} {})
                       (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0 0))
                       (assoc-in [:components :render-component] (render/create-sprite-component! "assets/images/placeholder.png"))
-                      (assoc-in [:components :command-component] (input/->CommandComponent nil))
-                      (assoc-in [:components :input-component] (input/->InputComponent nil))
-                      (assoc-in [:components :body-component] (physics/->BodyComponent {:x 0 :y 0 :z 0} {:x 0 :y 0 :z 0})))
+                      (input/movement {"a" :left, "d" :right, "s" :down})
+                      (physics/body 1.0 0.5))
         test-cube (-> (ecs/->Entity 43 {} {})
                       (assoc-in [:components :position-component] (ecs/->PositionComponent -400 100 20))
                       (assoc-in [:components :render-component] (render/create-cube-component)))
@@ -41,7 +39,6 @@
     (render/add-to-backend backend test-sprite)
     (render/add-to-backend backend test-cube)
     (render/add-to-backend backend background)
-    (js/document.addEventListener "keydown" input/handle-input!)
     (comment (signals/watch (signals/foldp
                              (fn [acc x] (inc acc))
                              0

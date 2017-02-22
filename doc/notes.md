@@ -61,3 +61,21 @@ Associative where key is the id (for fast lookups), and the value is the entity.
 I think the best way to do this is to have a "propogate" event that has a ":target :all" and delta-t.
 
 That seems messy, perhaps each event can be tagged with the time it was emitted, and then also the time it was processed?
+
+## Input and FSM
+
+How do we model behavior with signals?
+
+button input arrives, move from standing to running
+
+Input ->
+Entity -> movement system -> Entity (velocity set)
+
+(cyclic procedures? check how CLJs does watches)
+
+# ECS and Signals
+Systems are signal driven, state and data stored in entity.
+
+Components cannot update other components, but must trigger signals (no need to worry about a large mutable state between systems, and no need to worry how to thread a immutable object through spaghetti code)
+
+Component and Entity implement signals?

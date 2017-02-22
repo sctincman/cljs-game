@@ -4,7 +4,69 @@
 
 (enable-console-print!)
 
-(defrecord InputComponent [queue])
+(defrecord ^:export InputComponent [keymap state])
+
+;;need to handle keyup, via previous issue with making keyboard more versatile
+(defn- translate-input
+  "Given a keymap, filters and transforms the raw Javascript event"
+  [keymap event]
+  (let [key (.-key event)]
+    (keymap key)))
+
+;;placeholder, right state behavior here to figure out how to structure the rest
+;; How to get current state?
+;; on-exit (call before calling next state function)
+;; can emit (:turning-right-to-left, etc)
+;; possibly new signal? add a duration to the state?
+;;;; or, just have time as a second input signal,
+(defn movement-states [command-signal]
+  (let [out-signal (s/signal nil "input-movement-fsm")]
+    (letfn [(enter-moving-right []
+              ;;on-enter behavior
+              (println "Walking right")
+              (s/propagate out-signal :moving-right)
+              (s/watch command-signal
+                     (:tag out-signal)
+                     (fn [tag old new]
+                       (condp = new
+                         :left (enter-moving-left)
+                         :down (enter-standing)
+                         nil))))
+            (enter-moving-left []
+              (println "Walking left")
+              (s/propagate out-signal :moving-left)
+              (s/watch command-signal
+                     (:tag out-signal)
+                     (fn [tag old new]
+                       (condp = new
+                         :right (enter-moving-right)
+                         :down (enter-standing)
+                         nil))))
+            (enter-standing []
+              ;;on-enter behavior
+              (println "Standing")
+              (s/propagate out-signal :standing)
+              (s/watch command-signal
+                     (:tag out-signal)
+                     (fn [tag old new]
+                       (condp = new
+                         :left (enter-moving-left)
+                         :right (enter-moving-right)
+                         nil))))]
+      (enter-standing)
+      out-signal)))
+
+(defn ^:export movement
+  "Given a keymap and entity, add input-driven movement component to entity, and returns updated entity."
+  [entity keymap]
+  (let [input-signal (s/map (fn [event]
+                              (println (.-key event))
+                              (println (keymap (.-key event)))
+                              (keymap (.-key event)))
+                          (s/keyboard))]
+    ;; check if exists?
+    (assoc-in entity [:components :movement-component]
+              (->InputComponent keymap (movement-states input-signal)))))
 
 (defrecord CommandComponent [commands])
 
