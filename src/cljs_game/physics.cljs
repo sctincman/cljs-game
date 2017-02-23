@@ -8,7 +8,7 @@
 (defn ^:export body [entity mass speed]
   (let [movement-state (get-in entity [:components :movement-component :state]) ;hmmm, may need to change this re fields/components
         velocity-signal (s/foldp (fn [velocity movement]
-                                   (condp = movement
+                                   (condp = (:state movement)
                                      :moving-right {:x speed, :y 0.0, :z 0.0}
                                      :moving-left {:x (- speed), :y 0.0, :z 0.0}
                                      :standing {:x 0.0, :y 0.0, :z 0.0}

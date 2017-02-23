@@ -46,17 +46,57 @@
       (enter-standing)
       out-signal)))
 
+;;ugh, might be time to research function-state?
+(defn movement-fsm [input-signal]
+  (letfn [(enter-standing []
+            {:state :standing,
+             :transition standing})
+          (standing [event]
+            (when (= :down (:press event))
+              (condp = (:key event)
+                :left (enter-moving-left)
+                :right (enter-moving-right)
+                nil)))
+          
+          (enter-moving-right []
+            {:state :moving-right
+             :transition moving-right})
+          (moving-right [event]
+            (if (= :down (:press event))
+              (condp = (:key event)
+                :left (enter-moving-left)
+                nil)
+              (when (= :right (:key event))
+                (enter-standing))))
+          
+          (enter-moving-left []
+            {:state :moving-left
+             :transition moving-left})
+          (moving-left [event]
+            (if (= :down (:press event))
+              (condp = (:key event)
+                :right (enter-moving-right)
+                nil)
+              (when (= :left (:key event))
+                (enter-standing))))]
+    
+    (s/foldp (fn [state input]
+               (let [next-state ((:transition state) input)]
+                 (if (some? next-state)
+                   next-state
+                   state)))
+             {:state :standing, :transition standing}
+             input-signal)))
+
 (defn ^:export movement
   "Given a keymap and entity, add input-driven movement component to entity, and returns updated entity."
   [entity keymap]
   (let [input-signal (s/map (fn [event]
-                              (println (.-key event))
-                              (println (keymap (.-key event)))
-                              (keymap (.-key event)))
-                          (s/keyboard))]
+                              (update event :key keymap))
+                            s/keyboard)]
     ;; check if exists?
     (assoc-in entity [:components :movement-component]
-              (->InputComponent keymap (movement-states input-signal)))))
+              (->InputComponent keymap (movement-fsm input-signal)))))
 
 (defrecord CommandComponent [commands])
 
