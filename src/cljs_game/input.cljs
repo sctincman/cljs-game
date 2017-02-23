@@ -6,13 +6,6 @@
 
 (defrecord ^:export InputComponent [keymap state])
 
-;;need to handle keyup, via previous issue with making keyboard more versatile
-(defn- translate-input
-  "Given a keymap, filters and transforms the raw Javascript event"
-  [keymap event]
-  (let [key (.-key event)]
-    (keymap key)))
-
 ;;placeholder, right state behavior here to figure out how to structure the rest
 ;; How to get current state?
 ;; on-exit (call before calling next state function)
@@ -23,7 +16,6 @@
   (let [out-signal (s/signal nil "input-movement-fsm")]
     (letfn [(enter-moving-right []
               ;;on-enter behavior
-              (println "Walking right")
               (s/propagate out-signal :moving-right)
               (s/watch command-signal
                      (:tag out-signal)
@@ -33,7 +25,6 @@
                          :down (enter-standing)
                          nil))))
             (enter-moving-left []
-              (println "Walking left")
               (s/propagate out-signal :moving-left)
               (s/watch command-signal
                      (:tag out-signal)
@@ -44,7 +35,6 @@
                          nil))))
             (enter-standing []
               ;;on-enter behavior
-              (println "Standing")
               (s/propagate out-signal :standing)
               (s/watch command-signal
                      (:tag out-signal)

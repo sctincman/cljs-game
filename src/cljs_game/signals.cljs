@@ -104,19 +104,30 @@
 
 ;; TODO, mechanism to removeEventListener? Grr Javascript wants the original func object
 ;;; Possibly, store the anon func as the tag in the outsignal? Otherwise make another field in signal :/
-;; TODO listen for keypress/keyup events
 ;;; Optionally debounce? (eg, weird repeat behavior on Linux)
-(defn ^:export keyboard
-  "Returns a signal generated from keyboard events. Optionally accepts a function to transform the raw Javascript event before propagating."
-  ([] (keyboard identity))
-  ([transformer]
-   (let [out-signal (signal nil "keyboard")]
-     (.addEventListener
-      js/document
-      "keydown"
-      (fn [event]
-        (propagate out-signal (transformer event))))
-     out-signal)))
+(defn keyevents []
+  (let [out-signal (signal nil "keydown")]
+    (.addEventListener
+     js/document
+     "keydown"
+     (fn [event]
+       (propagate out-signal
+                  {:key (.-key event),
+                   :repeat (.-repeat event),
+                   :press :down})))
+    (.addEventListener
+     js/document
+     "keyup"
+     (fn [event]
+       (propagate out-signal
+                  {:key (.-key event),
+                   :repeat (.-repeat event),
+                   :press :up})))
+    out-signal))
+
+(def ^:export keyboard
+  "A signal generated from keyboard events. Events are maps with fields for key, repeat, and whether it is a keydown/keyup event."
+  (keyevents))
 
 (defn ^:export frames
   "Returns a signal that triggers when a new frame needs to be rendered, with the value of the absolute time. CLJS uses `requestAnimationFrame`."
