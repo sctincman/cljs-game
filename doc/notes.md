@@ -79,3 +79,17 @@ Systems are signal driven, state and data stored in entity.
 Components cannot update other components, but must trigger signals (no need to worry about a large mutable state between systems, and no need to worry how to thread a immutable object through spaghetti code)
 
 Component and Entity implement signals?
+
+No, have entities be *just* data. Systems implement signals. FSM *system* `propagates` a state-change?
+
+## Input/movement FSM
+Define behavior in system. A movement FSM is a specific system. If there is different behavior, either have it data-dependent or just make a new FSM (maybe a DSL to make this easier).
+
+Define state in state. `{:id :player :movement {:state :moving-right} ...}`
+
+Have input/AI be just data in the player (no holding signals). eg. `{:id :player :input {"a" :move-left "d" :move-right}}`
+
+Input system then finds entities with `:input` and maps the input using the map. ...but what then?
+
+* Command queue?
+* Globa objects? eg, how to pause the game?
