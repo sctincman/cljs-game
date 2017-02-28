@@ -3,4 +3,6 @@
 
 (defrecord ^:export Entity [identifier triggers behaviors])
 
-(defrecord ^:export PositionComponent [x y z])
+(defn ^:export create-entity
+  [prefix components]
+  (assoc components :identifier (gensym prefix)))

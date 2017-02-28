@@ -4,6 +4,34 @@
 
 (enable-console-print!)
 
+;; TODO, mechanism to removeEventListener? Grr Javascript wants the original func object
+;;; Possibly, store the anon func as the tag in the outsignal? Otherwise make another field in signal :/
+;;; Optionally debounce? (eg, weird repeat behavior on Linux)
+(defonce keyevents
+  (let [out-signal (s/signal nil "keyboard")]
+    (.addEventListener
+     js/document
+     "keydown"
+     (fn [event]
+       (s/propagate out-signal
+                  {:key (.-key event),
+                   :repeat (.-repeat event),
+                   :press :down})))
+    (.addEventListener
+     js/document
+     "keyup"
+     (fn [event]
+       (s/propagate out-signal
+                  {:key (.-key event),
+                   :repeat (.-repeat event),
+                   :press :up})))
+    out-signal))
+
+(def ^:export keyboard
+  "A signal generated from keyboard events. Events are maps with fields for key, repeat, and whether it is a keydown/keyup event."
+  keyevents)
+
+
 (defrecord ^:export InputComponent [keymap state])
 
 ;;placeholder, right state behavior here to figure out how to structure the rest
@@ -93,7 +121,7 @@
   [entity keymap]
   (let [input-signal (s/map (fn [event]
                               (update event :key keymap))
-                            s/keyboard)]
+                            keyboard)]
     ;; check if exists?
     (assoc entity :movement
            (->InputComponent keymap (movement-fsm input-signal)))))

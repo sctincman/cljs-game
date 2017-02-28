@@ -1,6 +1,7 @@
 (ns cljs-game.physics
   (:require [cljs-game.entity :as ecs]
-            [cljs-game.signals :as s]))
+            [cljs-game.signals :as s]
+            [cljs-game.vector :as v]))
 
 (defrecord ^:export BodyComponent [velocity acceleration])
 
@@ -26,29 +27,18 @@
   (and (:body entity)
        (:position entity)))
 
-;;conv func, likely need to optimize
-(defn vadd [u v]
-  {:x (+ (:x u) (:x v))
-   :y (+ (:y u) (:y v))
-   :z (+ (:z u) (:z v))})
-
-(defn vscale [a v]
-  {:x (* a (:x v))
-   :y (* a (:y v))
-   :z (* a (:y v))})
-
 (defn accelerate [body delta-t]
   (s/propagate (get-in body [:body :velocity])
-               (vadd (s/value (get-in body [:body :velocity]))
-                     (vscale delta-t
+               (v/add (s/value (get-in body [:body :velocity]))
+                     (v/scale delta-t
                              (s/value (get-in body [:body :acceleration])))))
   body)
 
 (defn propagate [body delta-t]
   (-> body
       (update :position
-              vadd
-              (vscale delta-t (s/value (get-in body [:body :velocity]))))
+              v/add
+              (v/scale delta-t (s/value (get-in body [:body :velocity]))))
       (accelerate delta-t)))
 
 (defn ^:export update-bodies

@@ -1,6 +1,17 @@
 (ns cljs-game.render
   (:require [cljs-game.entity :as ecs]
+            [cljs-game.signals :as s]
             [threejs :as three]))
+
+(defn ^:export frames
+  "Returns a signal that triggers when a new frame needs to be rendered, with the value of the absolute time. CLJS uses `requestAnimationFrame`."
+  []
+  (let [out-signal (s/signal (system-time) "frames")]
+    (letfn [(callback [time]
+              (s/propagate out-signal time)
+              (.requestAnimationFrame js/window callback))]
+      (callback (system-time))
+      out-signal)))
 
 (defrecord RenderComponent [backend])
 

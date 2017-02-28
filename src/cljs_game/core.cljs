@@ -4,7 +4,8 @@
             [cljs-game.entity :as ecs]
             [cljs-game.physics :as physics]
             [cljs-game.scene :as scene]
-            [cljs-game.signals :as signals]))
+            [cljs-game.signals :as signals]
+            [cljs-game.vector :as v]))
 
 (enable-console-print!)
 
@@ -15,7 +16,7 @@
                      (not run)
                      run))
                  true
-                 signals/keyboard))
+                 input/keyboard))
 
 (defn ^:export running? []
   (signals/value running-signal))
@@ -27,7 +28,7 @@
                      (not ortho)
                      ortho))
                  true
-                 signals/keyboard))
+                 input/keyboard))
 
 (defn ^:export perspective? []
   (signals/value ortho-signal))
@@ -47,15 +48,15 @@
 (defn ^:export js-start-game! []
   (let [backend (render/create-threejs-backend!)
         test-sprite (-> (ecs/->Entity 42 {} {})
-                        (assoc :position (ecs/->PositionComponent 0 0 0))
+                        (assoc :position v/zero)
                         (assoc :render (render/create-sprite-component! "assets/images/placeholder.png"))
                         (input/movement {"a" :left, "d" :right, "s" :down})
                         (physics/body 1.0 0.5))
         test-cube (-> (ecs/->Entity 43 {} {})
-                      (assoc :position (ecs/->PositionComponent -400 100 20))
+                      (assoc :position (v/vector -400 100 20))
                       (assoc :render (render/create-cube-component)))
         background (-> (ecs/->Entity 0 {} {})
-                       (assoc :position (ecs/->PositionComponent 0 0 -20))
+                       (assoc :position (v/vector 0 0 -20))
                        (assoc :render (render/create-sprite-component! "assets/images/test-background.png")))
         ;;This... is our game loop!
         world (signals/foldp (fn [state-signal step]
@@ -64,7 +65,7 @@
                              (signals/foldp step-world
                                             {:entities [test-cube test-sprite background]}
                                             (signals/delta-time (signals/tick 16.0)))
-                             (signals/delta-time (signals/frames)))]
+                             (signals/delta-time (render/frames)))]
     (render/add-to-backend backend test-sprite)
     (render/add-to-backend backend test-cube)
     (render/add-to-backend backend background)
@@ -72,7 +73,7 @@
                    (when (and (= "i" (:key event))
                               (= :down (:press event)))
                        (println (signals/value world))))
-                 signals/keyboard)))
+                 input/keyboard)))
 
 (defn on-js-reload []
   (println "Figwheel: reloaded!"))
