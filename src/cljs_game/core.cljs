@@ -58,12 +58,25 @@
         background (-> (ecs/->Entity 0 {} {})
                        (assoc :position (v/vector 0 0 -20))
                        (assoc :render (render/create-sprite-component! "assets/images/test-background.png")))
+        ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
+                                                    (/ js/window.innerWidth 2)
+                                                    (/ js/window.innerHeight 2)
+                                                    (/ js/window.innerHeight -2) 0.1 1000)
+                         (input/movement {"q" :left, "e" :right})
+                         (physics/body 1.0 0.5))
+        pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
+                        (input/movement {"q" :left, "e" :right})
+                        (physics/body 1.0 0.5))
+
         ;;This... is our game loop!
         world (signals/foldp (fn [state-signal step]
-                               (render/render backend (:entities (signals/value state-signal)) (perspective?))
+                               (render/render backend (:entities (signals/value state-signal))
+                                              (if (perspective?)
+                                                :perspective
+                                                :orthographic))
                                state-signal)
                              (signals/foldp step-world
-                                            {:entities [test-cube test-sprite background]}
+                                            {:entities [test-cube test-sprite background ortho-camera pers-camera]}
                                             (signals/delta-time (signals/tick 16.0)))
                              (signals/delta-time (render/frames)))]
     (render/add-to-backend backend test-sprite)
