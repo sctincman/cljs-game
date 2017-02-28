@@ -7,8 +7,8 @@
 (defrecord ScaleComponent [x y z])
 
 (defn renderable? [entity]
-  (and (:render-component (:components entity))
-       (:position-component (:components entity))))
+  (and (:render entity)
+       (:position entity)))
 
 (defprotocol ^:export RenderBackend
   "Abstract the details of a backend into this standard interface."
@@ -19,7 +19,7 @@
 (defrecord ^:export ThreeJSBackend [renderer scene perspective-camera ortho-camera objects]
   RenderBackend
   (add-to-backend [this entity]
-    (.add scene (get-in entity [:components :render-component :backend :mesh]))
+    (.add scene (get-in entity [:render :backend :mesh]))
     entity)
   (render [this entities perspective?]
     (let [entities (doall (prepare-scene this entities))]
@@ -31,12 +31,12 @@
     (map (fn [entity]
            (if (renderable? entity)
              (do
-               (set! (.-x (.-position (get-in entity [:components :render-component :backend :mesh])))
-                     (get-in entity [:components :position-component :x]))
-               (set! (.-y (.-position (get-in entity [:components :render-component :backend :mesh])))
-                     (get-in entity [:components :position-component :y]))
-               (set! (.-z (.-position (get-in entity [:components :render-component :backend :mesh])))
-                     (get-in entity [:components :position-component :z])))
+               (set! (.-x (.-position (get-in entity [:render :backend :mesh])))
+                     (get-in entity [:position :x]))
+               (set! (.-y (.-position (get-in entity [:render :backend :mesh])))
+                     (get-in entity [:position :y]))
+               (set! (.-z (.-position (get-in entity [:render :backend :mesh])))
+                     (get-in entity [:position :z])))
              entity))
          entities)))
 
