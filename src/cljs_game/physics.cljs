@@ -7,7 +7,7 @@
 
 ;;hmm body will need all forces, not just movement, hack for just movement now
 (defn ^:export body [entity mass speed]
-  (let [movement-state (get-in entity [:movement :state]) ;hmmm, may need to change this re fields/components
+  (let [movement-state (:movement entity)
         velocity-signal (s/foldp (fn [velocity movement]
                                    (condp = (:state movement)
                                      :moving-right {:x speed, :y 0.0, :z 0.0}

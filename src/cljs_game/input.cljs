@@ -75,7 +75,7 @@
       out-signal)))
 
 ;;ugh, might be time to research function-state?
-(defn movement-fsm [input-signal]
+(defn ^:export movement-fsm [input-signal]
   (letfn [(enter-standing []
             {:state :standing,
              :transition standing})
@@ -123,5 +123,6 @@
                               (update event :key keymap))
                             keyboard)]
     ;; check if exists?
-    (assoc entity :movement
-           (->InputComponent keymap (movement-fsm input-signal)))))
+    (-> entity
+        (assoc :input keymap)
+        (assoc :movement (movement-fsm input-signal)))))

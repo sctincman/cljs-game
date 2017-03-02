@@ -1,5 +1,6 @@
 (ns cljs-game.scene
   (:require [cljs-game.entity :as ecs]
+            [cljs-game.signals :as s]
             [ajax.core :as ajax]))
 
 (defprotocol ^:export Scene

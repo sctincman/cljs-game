@@ -5,7 +5,8 @@
             [cljs-game.physics :as physics]
             [cljs-game.scene :as scene]
             [cljs-game.signals :as signals]
-            [cljs-game.vector :as v]))
+            [cljs-game.vector :as v]
+            [cljs-game.ai :as ai]))
 
 (enable-console-print!)
 
@@ -36,7 +37,7 @@
 (defn step-entities
   [entities delta-time]
   (doall (-> entities
-             ;; perhaps instead have it watch the step-signal?
+             (ai/propagate delta-time)
              (physics/update-bodies delta-time))))
 
 (defn step-world
@@ -55,6 +56,11 @@
         test-cube (-> (ecs/->Entity 43 {} {})
                       (assoc :position (v/vector -400 100 20))
                       (assoc :render (render/create-cube-component)))
+        moving-cube (-> (ecs/->Entity 44 {} {})
+                        (assoc :position (v/vector 400 -100 -20))
+                        (assoc :render (render/create-cube-component))
+                        (ai/add-patrol (v/vector -600 0 0) (v/vector 300 0 0))
+                        (physics/body 1.0 0.2))
         background (-> (ecs/->Entity 0 {} {})
                        (assoc :position (v/vector 0 0 -20))
                        (assoc :render (render/create-sprite-component! "assets/images/test-background.png")))
@@ -76,11 +82,12 @@
                                                 :orthographic))
                                state-signal)
                              (signals/foldp step-world
-                                            {:entities [test-cube test-sprite background ortho-camera pers-camera]}
+                                            {:entities [test-cube moving-cube test-sprite background ortho-camera pers-camera]}
                                             (signals/delta-time (signals/tick 16.0)))
                              (signals/delta-time (render/frames)))]
     (render/add-to-backend backend test-sprite)
     (render/add-to-backend backend test-cube)
+    (render/add-to-backend backend moving-cube)
     (render/add-to-backend backend background)
     (signals/map (fn [event]
                    (when (and (= "i" (:key event))
