@@ -43,25 +43,25 @@
 (defn step-world
   [state delta-time]
   (if (running?)
-    (update state :entities #(step-entities % delta-time))
+    (step-entities state delta-time)
     state))
 
 (defn ^:export js-start-game! []
   (let [backend (render/create-threejs-backend!)
-        test-sprite (-> (ecs/->Entity 42 {} {})
+        test-sprite (-> {}
                         (assoc :position v/zero)
                         (assoc :render (render/create-sprite-component! "assets/images/placeholder.png"))
                         (input/movement {"a" :left, "d" :right, "s" :down})
                         (physics/body 1.0 0.5))
-        test-cube (-> (ecs/->Entity 43 {} {})
+        test-cube (-> {}
                       (assoc :position (v/vector -400 100 20))
                       (assoc :render (render/create-cube-component)))
-        moving-cube (-> (ecs/->Entity 44 {} {})
+        moving-cube (-> {}
                         (assoc :position (v/vector 400 -100 -20))
                         (assoc :render (render/create-cube-component))
                         (ai/add-patrol (v/vector -600 0 0) (v/vector 300 0 0))
                         (physics/body 1.0 0.2))
-        background (-> (ecs/->Entity 0 {} {})
+        background (-> {}
                        (assoc :position (v/vector 0 0 -20))
                        (assoc :render (render/create-sprite-component! "assets/images/test-background.png")))
         ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
@@ -73,16 +73,21 @@
         pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
                         (input/movement {"q" :left, "e" :right})
                         (physics/body 1.0 0.5))
-
+        entities {:player test-sprite
+                  :a-cube test-cube
+                  :m-cube moving-cube
+                  :background background
+                  :orthographic-camera ortho-camera
+                  :perspective-camera pers-camera}
         ;;This... is our game loop!
         world (signals/foldp (fn [state-signal step]
-                               (render/render backend (:entities (signals/value state-signal))
+                               (render/render backend (signals/value state-signal)
                                               (if (perspective?)
-                                                :perspective
-                                                :orthographic))
+                                                :perspective-camera
+                                                :orthographic-camera))
                                state-signal)
                              (signals/foldp step-world
-                                            {:entities [test-cube moving-cube test-sprite background ortho-camera pers-camera]}
+                                            entities
                                             (signals/delta-time (signals/tick 16.0)))
                              (signals/delta-time (render/frames)))]
     (render/add-to-backend backend test-sprite)

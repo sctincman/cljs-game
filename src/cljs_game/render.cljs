@@ -26,7 +26,7 @@
 
 (defprotocol ^:export RenderBackend
   "Abstract the details of a backend into this standard interface."
-  (render [this entities perspective?] "Using the list of entities, render and display the scene.")
+  (render [this entities camera] "Using the list of entities, render and display the scene. Camera is the key of the camera entity to use for rendering.")
   (add-to-backend [this entity] "Ensure backend is aware of an entity's render-components. Eg for Three.js this does Scene.add(mesh).")
   (prepare-scene [this entities] "Perform backend specific actions needed before rendering."))
 
@@ -39,26 +39,22 @@
   (add-to-backend [this entity]
     (.add scene (get-in entity [:render :backend :object]))
     entity)
-  (render [this entities camera-type]
-    (let [entities (doall (prepare-scene this entities))
-          camera (first (filter
-                         (fn [entity]
-                           (and (:camera entity)
-                                (= camera-type (get-in entity [:camera :type]))))
-                         entities))]
-      (.render renderer scene (get-in camera [:render :backend :object]))
+  (render [this entities camera]
+    (let [entities (doall (prepare-scene this entities))]
+      (.render renderer scene (get-in entities [camera :render :backend :object]))
       entities))
   (prepare-scene [this entities]
-    (map (fn [entity]
-           (when (renderable? entity)
-             (set! (.-x (.-position (get-in entity [:render :backend :object])))
-                   (get-in entity [:position :x]))
-             (set! (.-y (.-position (get-in entity [:render :backend :object])))
-                   (get-in entity [:position :y]))
-             (set! (.-z (.-position (get-in entity [:render :backend :object])))
-                   (get-in entity [:position :z])))
-           entity)
-         entities)))
+    (reduce-kv (fn [entities id entity]
+                 (when (renderable? entity)
+                   (set! (.-x (.-position (get-in entity [:render :backend :object])))
+                         (get-in entity [:position :x]))
+                   (set! (.-y (.-position (get-in entity [:render :backend :object])))
+                         (get-in entity [:position :y]))
+                   (set! (.-z (.-position (get-in entity [:render :backend :object])))
+                         (get-in entity [:position :z])))
+                 entities)
+               entities
+               entities)))
 
 (defrecord ^:export ThreeJSCamera [js-object position rotation])
 

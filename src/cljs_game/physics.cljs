@@ -43,8 +43,9 @@
 
 (defn ^:export update-bodies
   [entities delta-t]
-  (map (fn [entity]
-         (if (physical? entity)
-           (propagate entity delta-t)
-           entity))
-       entities))
+  (reduce-kv (fn [entities id entity]
+               (if (physical? entity)
+                 (assoc entities id (propagate entity delta-t))
+                 entities))
+             entities
+             entities))

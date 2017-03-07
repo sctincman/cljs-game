@@ -5,7 +5,7 @@
 
 (defn- patrol
   [left right signal]
-  (fn [entity dt]
+  (fn [entity dt world]
     (when (some? (:position entity))
       (let [pos (:position entity)]
         (when (< (:x pos) (:x left))
@@ -27,8 +27,9 @@
 (defn ^:export propagate
   "Propagate AI behavior over time"
   [entities delta-t]
-  (map (fn [entity]
-         (if (some? (:ai entity))
-           ((:ai entity) entity delta-t)
-           entity))
-       entities))
+  (reduce-kv (fn [entities id entity]
+               (if (some? (:ai entity))
+                 (assoc entities id ((:ai entity) entity delta-t entities))
+                 entities))
+             entities
+             entities))
