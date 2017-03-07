@@ -1,7 +1,8 @@
 (ns cljs-game.ai
   (:require [cljs-game.entity :as ecs]
             [cljs-game.signals :as s]
-            [cljs-game.input :as input]))
+            [cljs-game.input :as input]
+            [cljs-game.vector :as v]))
 
 (defn- patrol
   [left right signal]
@@ -33,3 +34,22 @@
                  entities))
              entities
              entities))
+
+(defn- follow*
+  [target offset]
+  (fn [entity dt world]
+    (let [followee (get world target)]
+      (if (and (some? (:position entity))
+               (some? (:position followee)))
+        ;;complicated behavior goes here
+        (assoc entity :position (v/add (:position followee)
+                                       offset))
+        entity))))
+
+;; compose behaviors?
+
+(defn ^:export follow
+  [entity target offset]
+  ;; add position if it isn' there
+  ;; add in behavior component
+  (assoc entity :ai (follow* target offset)))

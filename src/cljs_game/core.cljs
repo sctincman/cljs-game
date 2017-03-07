@@ -71,8 +71,7 @@
                          (input/movement {"q" :left, "e" :right})
                          (physics/body 1.0 0.5))
         pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
-                        (input/movement {"q" :left, "e" :right})
-                        (physics/body 1.0 0.5))
+                        (ai/follow :player (v/vector 0 0 900)))
         entities {:player test-sprite
                   :a-cube test-cube
                   :m-cube moving-cube
