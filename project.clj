@@ -1,6 +1,7 @@
 (defproject cljs-game "0.1.0-SNAPSHOT"
   :description "CLJS based WebGL game engine"
   :url "http://github.com/sctincman/cljs-game"
+  :license "MIT"
   :min-lein-version "2.0.0"
   :source-paths ["src/"]
   :dependencies [[org.clojure/clojure "1.8.0"]
@@ -9,7 +10,7 @@
                  [org.clojure/clojurescript "1.9.293"]
                  [org.clojure/core.async "0.2.391"
                   :exclusions [org.clojure/tools.reader]]
-                 [org.clojure/data.json "0.2.6"]
+                 [org.clojure/data.json "0.2.6"] ;for CLJ, not CLJS
                  [cljs-ajax "0.5.8"]]
   :plugins [[lein-ring "0.9.7"]
             [lein-codox "0.10.2"]

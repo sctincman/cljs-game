@@ -1,25 +1,51 @@
 (ns cljs-game.physics
-  (:require [cljs-game.entity :as ecs]))
+  (:require [cljs-game.entity :as ecs]
+            [cljs-game.signals :as s]
+            [cljs-game.vector :as v]))
 
 (defrecord ^:export BodyComponent [velocity acceleration])
 
+;;hmm body will need all forces, not just movement, hack for just movement now
+(defn ^:export body [entity mass speed]
+  (let [movement-state (:movement entity)
+        velocity-signal (s/foldp (fn [velocity movement]
+                                   (condp = (:state movement)
+                                     :moving-right {:x speed, :y 0.0, :z 0.0}
+                                     :moving-left {:x (- speed), :y 0.0, :z 0.0}
+                                     :standing {:x 0.0, :y 0.0, :z 0.0}
+                                     nil velocity))
+                                 {:x 0.0, :y 0.0, :z 0.0}
+                                 movement-state)
+        acceleration-signal (s/signal {:x 0.0, :y 0.0, :z 0.0} "accel")]
+    (assoc entity :body
+           (->BodyComponent velocity-signal acceleration-signal))))
+
+
+;;have body listen to a forces signal
+;;foldp over body/time to propagate?
 (defn physical? [entity]
-  (and (:body-component (:components entity))
-       (:position-component (:components entity))))
+  (and (:body entity)
+       (:position entity)))
+
+(defn accelerate [body delta-t]
+  (s/propagate (get-in body [:body :velocity])
+               (v/add (s/value (get-in body [:body :velocity]))
+                     (v/scale delta-t
+                             (s/value (get-in body [:body :acceleration])))))
+  body)
 
 (defn propagate [body delta-t]
   (-> body
-      (update-in [:components :position-component :x] + (* delta-t (get-in body [:components :body-component :velocity :x])))
-      (update-in [:components :position-component :y] + (* delta-t (get-in body [:components :body-component :velocity :y])))
-      (update-in [:components :position-component :z] + (* delta-t (get-in body [:components :body-component :velocity :z])))
-      (update-in [:components :body-component :velocity :x] + (* delta-t (get-in body [:components :body-component :acceleration :x])))
-      (update-in [:components :body-component :velocity :y] + (* delta-t (get-in body [:components :body-component :acceleration :y])))
-      (update-in [:components :body-component :velocity :z] + (* delta-t (get-in body [:components :body-component :acceleration :z])))))
+      (update :position
+              v/add
+              (v/scale delta-t (s/value (get-in body [:body :velocity]))))
+      (accelerate delta-t)))
 
 (defn ^:export update-bodies
   [entities delta-t]
-  (let [bodies (filter physical? entities)
-        xs (remove physical? entities)]
-    (concat xs
-            (map (fn [body] (propagate body delta-t))
-                 bodies))))
+  (reduce-kv (fn [entities id entity]
+               (if (physical? entity)
+                 (assoc entities id (propagate entity delta-t))
+                 entities))
+             entities
+             entities))

@@ -2,82 +2,102 @@
   (:require [cljs-game.render :as render]
             [cljs-game.input :as input]
             [cljs-game.entity :as ecs]
-            [cljs-game.physics :as physics]))
+            [cljs-game.physics :as physics]
+            [cljs-game.scene :as scene]
+            [cljs-game.signals :as signals]
+            [cljs-game.vector :as v]
+            [cljs-game.ai :as ai]))
 
 (enable-console-print!)
 
-(defonce ^:export world
-  (atom {:accum-time 0.0
-         :prev-time 0.0
-         :running true
-         :perspective true
-         :entities []}))
+(defonce running-signal
+  (signals/foldp (fn [run event]
+                   (if (and (= "p" (:key event))
+                            (= :down (:press event)))
+                     (not run)
+                     run))
+                 true
+                 input/keyboard))
 
-(defn update-world
+(defn ^:export running? []
+  (signals/value running-signal))
+
+(defonce ortho-signal
+  (signals/foldp (fn [ortho event]
+                   (if (and (= "o" (:key event))
+                            (= :down (:press event)))
+                     (not ortho)
+                     ortho))
+                 true
+                 input/keyboard))
+
+(defn ^:export perspective? []
+  (signals/value ortho-signal))
+
+(defn step-entities
   [entities delta-time]
-  entities)
+  (doall (-> entities
+             (ai/propagate delta-time)
+             (physics/update-bodies delta-time))))
 
-(defn game-loop!
-  [now]
-  (let [prev (:prev-time @world)
-        leftover-time (:accum-time @world)
-        time-step 16.0]
-    (swap! world assoc :prev-time now)
-    (loop [accumulated (+ leftover-time (- now prev))
-           attempts 10
-           entities (:entities @world)]
-      (if (and (>= accumulated time-step)
-               (pos? attempts)
-               (:running @world))
-        (recur (- accumulated time-step)
-               (dec attempts)
-               (-> entities
-                   (input/process-input)
-                   (input/process-commands)
-                   (physics/update-bodies time-step)
-                   (update-world time-step)))
-        (do (swap! world assoc :leftover-time accumulated)
-          (swap! world assoc :entities entities))))))
+(defn step-world
+  [state delta-time]
+  (if (running?)
+    (step-entities state delta-time)
+    state))
 
 (defn ^:export js-start-game! []
   (let [backend (render/create-threejs-backend!)
-        test-sprite (-> (ecs/->Entity 42 {})
-                      (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0 0))
-                      (assoc-in [:components :render-component] (render/create-sprite-component! "assets/images/placeholder.png"))
-                      (assoc-in [:components :command-component] (input/->CommandComponent nil))
-                      (assoc-in [:components :input-component] (input/->InputComponent nil))
-                      (assoc-in [:components :body-component] (physics/->BodyComponent {:x 0 :y 0 :z 0} {:x 0 :y 0 :z 0})))
-        test-cube (-> (ecs/->Entity 43 {})
-                      (assoc-in [:components :position-component] (ecs/->PositionComponent -400 100 20))
-                      (assoc-in [:components :render-component] (render/create-cube-component)))
-        background (-> (ecs/->Entity 0 {})
-                       (assoc-in [:components :position-component] (ecs/->PositionComponent 0 0 -20))
-                       (assoc-in [:components :render-component] (render/create-sprite-component! "assets/images/test-background.png")))]
+        test-sprite (-> {}
+                        (assoc :position v/zero)
+                        (assoc :render (render/create-sprite-component! "assets/images/placeholder.png"))
+                        (input/movement {"a" :left, "d" :right, "s" :down})
+                        (physics/body 1.0 0.5))
+        test-cube (-> {}
+                      (assoc :position (v/vector -400 100 20))
+                      (assoc :render (render/create-cube-component)))
+        moving-cube (-> {}
+                        (assoc :position (v/vector 400 -100 -20))
+                        (assoc :render (render/create-cube-component))
+                        (ai/add-patrol (v/vector -600 0 0) (v/vector 300 0 0))
+                        (physics/body 1.0 0.2))
+        background (-> {}
+                       (assoc :position (v/vector 0 0 -20))
+                       (assoc :render (render/create-sprite-component! "assets/images/test-background.png")))
+        ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
+                                                    (/ js/window.innerWidth 2)
+                                                    (/ js/window.innerHeight 2)
+                                                    (/ js/window.innerHeight -2) 0.1 1000)
+                         (input/movement {"q" :left, "e" :right})
+                         (physics/body 1.0 0.5))
+        pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
+                        (ai/follow :player (v/vector 0 0 900)))
+        entities {:player test-sprite
+                  :a-cube test-cube
+                  :m-cube moving-cube
+                  :background background
+                  :orthographic-camera ortho-camera
+                  :perspective-camera pers-camera}
+        ;;This... is our game loop!
+        world (signals/foldp (fn [state-signal step]
+                               (render/render backend (signals/value state-signal)
+                                              (if (perspective?)
+                                                :perspective-camera
+                                                :orthographic-camera))
+                               state-signal)
+                             (signals/foldp step-world
+                                            entities
+                                            (signals/delta-time (signals/tick 16.0)))
+                             (signals/delta-time (render/frames)))]
     (render/add-to-backend backend test-sprite)
     (render/add-to-backend backend test-cube)
+    (render/add-to-backend backend moving-cube)
     (render/add-to-backend backend background)
-    (js/document.addEventListener "keydown" input/handle-input!)
-    (swap! world assoc :prev-time js/Performance.now)
-    (swap! world assoc :entities [test-cube test-sprite])
-    (swap! input/input-mapping assoc "i" {:type :input
-                                          :action :info
-                                          :target :none
-                                          :execute (fn [] (println @world))})
-    (swap! input/input-mapping assoc "p" {:type :input
-                                          :action :pause
-                                          :target :world
-                                          :execute (fn [] (swap! world assoc :running
-                                                                 (not (@world :running))))})
-    (swap! input/input-mapping assoc "o" {:type :input
-                                          :action :perspective
-                                          :target :renderer
-                                          :execute (fn [] (swap! world assoc :perspective
-                                                                 (not (@world :perspective))))})
-    (let [animate (fn animate [current-time]
-                    (js/requestAnimationFrame animate)
-                    (game-loop! current-time)
-                    (render/render backend (:entities @world) (:perspective @world)))]
-      (animate js/Performance.now))))
+    (signals/map (fn [event]
+                   (when (and (= "i" (:key event))
+                              (= :down (:press event)))
+                       (println (signals/value world))))
+                 input/keyboard)))
 
 (defn on-js-reload []
   (println "Figwheel: reloaded!"))

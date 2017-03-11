@@ -1,14 +1,8 @@
 (ns cljs-game.entity
   (:require ))
 
-(defprotocol ^:export Entity)
+(defrecord ^:export Entity [identifier triggers behaviors])
 
-(defprotocol ^:export Component)
-
-(defprotocol ^:export System)
-
-(defrecord ^:export Entity [id components])
-
-(defrecord ^:export Component [name])
-
-(defrecord ^:export PositionComponent [x y z])
+(defn ^:export create-entity
+  [prefix components]
+  (assoc components :identifier (gensym prefix)))
