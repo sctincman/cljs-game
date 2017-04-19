@@ -6,6 +6,7 @@
             [cljs-game.scene :as scene]
             [cljs-game.signals :as signals]
             [cljs-game.vector :as v]
+            [cljs-game.collision :as collision]
             [cljs-game.ai :as ai]))
 
 (enable-console-print!)
@@ -38,7 +39,8 @@
   [entities delta-time]
   (doall (-> entities
              (ai/propagate delta-time)
-             (physics/update-bodies delta-time))))
+             (physics/update-bodies delta-time)
+             (collision/handle-collisions))))
 
 (defn step-world
   [state delta-time]
@@ -52,18 +54,24 @@
                         (assoc :position v/zero)
                         (assoc :render (render/create-sprite-component! "assets/images/placeholder.png"))
                         (input/movement {"a" :left, "d" :right, "s" :down})
-                        (physics/body 1.0 0.5))
+                        (physics/body 1.0 0.5)
+                        (collision/add-aabb v/zero 174.0 564.0 1.0)
+                        (assoc :collisions (signals/signal nil "collision")))
         test-cube (-> {}
-                      (assoc :position (v/vector -400 100 20))
-                      (assoc :render (render/create-cube-component)))
+                      (assoc :position (v/vector -400 100 0))
+                      (assoc :render (render/create-cube-component))
+                      (collision/add-aabb v/zero 200.0 200.0 200.0)
+                      (assoc :collisions (signals/signal nil "collision")))
         moving-cube (-> {}
-                        (assoc :position (v/vector 400 -100 -20))
+                        (assoc :position (v/vector 400 -50 -20))
                         (assoc :render (render/create-cube-component))
                         (ai/add-patrol (v/vector -600 0 0) (v/vector 300 0 0))
-                        (physics/body 1.0 0.2))
+                        (physics/body 1.0 0.2)
+                        (collision/add-aabb v/zero 200.0 200.0 200.0))
         background (-> {}
                        (assoc :position (v/vector 0 0 -20))
-                       (assoc :render (render/create-sprite-component! "assets/images/test-background.png")))
+                       (assoc :render (render/create-sprite-component! "assets/images/test-background.png"))
+                       (collision/add-space 1000.0))
         ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
                                                     (/ js/window.innerWidth 2)
                                                     (/ js/window.innerHeight 2)
@@ -89,6 +97,8 @@
                                             entities
                                             (signals/delta-time (signals/tick 16.0)))
                              (signals/delta-time (render/frames)))]
+    (signals/watch (:collisions test-sprite) :debug-collisions (fn [target old new] (println "Collision! " new)))
+    (signals/watch (:collisions test-cube) :debug-collisions (fn [target old new] (println "Collision! " new)))
     (render/add-to-backend backend test-sprite)
     (render/add-to-backend backend test-cube)
     (render/add-to-backend backend moving-cube)
@@ -97,7 +107,8 @@
                    (when (and (= "i" (:key event))
                               (= :down (:press event)))
                        (println (signals/value world))))
-                 input/keyboard)))
+                 input/keyboard)
+    world))
 
 (defn on-js-reload []
   (println "Figwheel: reloaded!"))
