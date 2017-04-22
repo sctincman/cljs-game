@@ -57,6 +57,15 @@
                         (physics/body 1.0 0.5)
                         (collision/add-aabb v/zero 174.0 564.0 1.0)
                         (assoc :collisions (signals/signal nil "collision")))
+        test-atlas (-> {}
+                        (assoc :position (v/vector 0 0 100))
+                        (assoc :render (render/create-sprite-component! "assets/images/deer.png" 64.0 64.0)))
+        test-atlas2 (-> {}
+                        (assoc :position (v/vector 0 0 200))
+                        (assoc :render (render/create-sprite-component! "assets/images/deer.png" 64.0 64.0)))
+        test-atlas3 (-> {}
+                        (assoc :position (v/vector 0 0 500))
+                        (assoc :render (render/create-sprite-component! "assets/images/deer.png" 64.0 64.0)))
         test-cube (-> {}
                       (assoc :position (v/vector -400 100 0))
                       (assoc :render (render/create-cube-component))
@@ -69,7 +78,7 @@
                         (physics/body 1.0 0.2)
                         (collision/add-aabb v/zero 200.0 200.0 200.0))
         background (-> {}
-                       (assoc :position (v/vector 0 0 -20))
+                       (assoc :position (v/vector 0 0 -100))
                        (assoc :render (render/create-sprite-component! "assets/images/test-background.png"))
                        (collision/add-space 1000.0))
         ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
@@ -81,6 +90,9 @@
         pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
                         (ai/follow :player (v/vector 0 0 900)))
         entities {:player test-sprite
+                  :deer test-atlas
+                  :deer2 test-atlas2
+                  :deer3 test-atlas3
                   :a-cube test-cube
                   :m-cube moving-cube
                   :background background
@@ -100,6 +112,9 @@
     (signals/watch (:collisions test-sprite) :debug-collisions (fn [target old new] (println "Collision! " new)))
     (signals/watch (:collisions test-cube) :debug-collisions (fn [target old new] (println "Collision! " new)))
     (render/add-to-backend backend test-sprite)
+    (render/add-to-backend backend test-atlas)
+    (render/add-to-backend backend test-atlas2)
+    (render/add-to-backend backend test-atlas3)
     (render/add-to-backend backend test-cube)
     (render/add-to-backend backend moving-cube)
     (render/add-to-backend backend background)
