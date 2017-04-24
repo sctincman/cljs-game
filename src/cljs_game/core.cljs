@@ -82,9 +82,25 @@
                         (physics/body 1.0 0.2)
                         (collision/add-aabb v/zero 200.0 200.0 200.0))
         background (-> {}
-                       (assoc :position (v/vector 0 0 -100))
+                       (assoc :position (v/vector 0 0 -200))
                        (update :renders conj (render/create-sprite backend (:background resources)))
                        (collision/add-space 1000.0))
+        forest-0 (-> {}
+                     (assoc :position (v/vector 0 0 -150))
+                     (update :renders conj (render/scale (render/create-sprite backend (:forest-0 resources))
+                                                         8.0)))
+        forest-1 (-> {}
+                     (assoc :position (v/vector 0 0 -60))
+                     (update :renders conj (render/scale (render/create-sprite backend (:forest-1 resources))
+                                                         8.0)))
+        forest-2 (-> {}
+                     (assoc :position (v/vector 0 0 -30))
+                     (update :renders conj (render/scale (render/create-sprite backend (:forest-2 resources))
+                                                         8.0)))
+        forest-3 (-> {}
+                     (assoc :position (v/vector 0 0 0))
+                     (update :renders conj (render/scale (render/create-sprite backend (:forest-3 resources))
+                                                         8.0)))
         ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
                                                     (/ js/window.innerWidth 2)
                                                     (/ js/window.innerHeight 2)
@@ -92,7 +108,7 @@
                          (input/movement {"q" :left, "e" :right})
                          (physics/body 1.0 0.5))
         pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
-                        (ai/follow :player (v/vector 0 0 900)))
+                        (ai/follow :player (v/vector 0 0 700)))
         entities {:player test-sprite
                   :deer test-atlas
                   :deer2 test-atlas2
@@ -100,6 +116,10 @@
                   :a-cube test-cube
                   :m-cube moving-cube
                   :background background
+                  :forest-0 forest-0
+                  :forest-1 forest-1
+                  :forest-2 forest-2
+                  :forest-3 forest-3
                   :orthographic-camera ortho-camera
                   :perspective-camera pers-camera}
         ;;This... is our game loop!

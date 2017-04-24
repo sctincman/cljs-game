@@ -110,7 +110,8 @@
 
 (defprotocol ^:export ISprite
   (key-texture [this key])
-  (set-texture [this texture]))
+  (set-texture [this texture])
+  (scale [this value]))
 
 (defrecord ^:export ThreeJSSprite [object texture atlas-key scale-x scale-y]
   ISprite
@@ -127,10 +128,19 @@
             js-texture (:texture sub)]
         (set! (.-map (.-material object)) js-texture)
         (set! (.-needsUpdate (.-material object)) true)
-        (set! (.-x (.-scale object)) (:width sub))
-        (set! (.-y (.-scale object)) (:height sub))
+        (set! (.-x (.-scale object)) (* scale-x (:width sub)))
+        (set! (.-y (.-scale object)) (* scale-y (:height sub)))
         (assoc this :atlas-key key))
       this))
+  (scale [this value]
+    (let [sub (if (satisfies? ITextureAtlas texture)
+                (getsub texture atlas-key)
+                texture)]
+      (set! (.-x (.-scale object)) (* value (:width sub)))
+      (set! (.-y (.-scale object)) (* value (:height sub)))
+      (-> this
+          (assoc scale-x value)
+          (assoc scale-y value))))
   IRenderable
   (prepare [this entity]
     (when (some? (:position entity))
@@ -214,7 +224,7 @@
 (defn ^:export ThreeJSPerspectiveCamera [fov aspect near far]
   (let [camera (three/PerspectiveCamera. fov aspect near far)
         entity (-> (ecs/->Entity (gensym "perspective-camera") {} {})
-                   (assoc :position (v/vector 0 0 900))
+                   (assoc :position (v/vector 0 0 700))
                    (assoc :rotation nil)
                    (assoc :camera {:type :perspective}))]
     (update entity :renders conj
@@ -223,7 +233,7 @@
 (defn ^:export ThreeJSOrthoCamera [left right top bottom near far]
   (let [camera (three/OrthographicCamera. left right top bottom near far)
         entity (-> (ecs/->Entity (gensym "ortho-camera") {} {})
-                   (assoc :position (v/vector 0 0 900))
+                   (assoc :position (v/vector 0 0 700))
                    (assoc :rotation nil)
                    (assoc :camera {:type :orthographic}))]
     (update entity :renders conj
@@ -258,5 +268,9 @@
   (let [loader (three/TextureLoader.)
         textures {:placeholder "assets/images/placeholder.png"
                   :deer "assets/images/deer.png"
-                  :background "assets/images/test-background.png"}]
+                  :background "assets/images/test-background.png"
+                  :forest-0 "assets/images/forest-0.png"
+                  :forest-1 "assets/images/forest-1.png"
+                  :forest-2 "assets/images/forest-2.png"
+                  :forest-3 "assets/images/forest-3.png"}]
     (load-texture! loader (first textures) (rest textures) {} start-func)))
