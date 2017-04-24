@@ -48,26 +48,28 @@
     (step-entities state delta-time)
     state))
 
-(defn ^:export js-start-game! []
-  (let [backend (render/create-threejs-backend!)
-        placeholder (render/load-texture! "assets/images/placeholder.png")
-        deer-sheet (render/load-texture! "assets/images/deer.png")
+(defn ^:export start-game! [backend resources]
+  (let [resources (update resources :deer render/sprite-sheet 64.0 64.0)
         test-sprite (-> {}
                         (assoc :position v/zero)
-                        (update :renders conj (render/create-sprite! backend "assets/images/placeholder.png" nil nil))
+                        (update :renders conj (render/create-sprite backend (:placeholder resources)))
                         (input/movement {"a" :left, "d" :right, "s" :down})
                         (physics/body 1.0 0.5)
                         (collision/add-aabb v/zero 174.0 564.0 1.0)
                         (assoc :collisions (signals/signal nil "collision")))
         test-atlas (-> {}
-                        (assoc :position (v/vector 0 0 100))
-                        (update :renders conj (render/create-sprite! backend "assets/images/deer.png" 64.0 64.0)))
+                        (assoc :position (v/vector 0 0 50))
+                        (update :renders conj (render/create-sprite backend
+                                                                    (render/subtexture (:deer resources)
+                                                                                       128 64 64 64))))
         test-atlas2 (-> {}
                         (assoc :position (v/vector 0 0 200))
-                        (update :renders conj (render/create-sprite! backend "assets/images/deer.png" 64.0 64.0)))
+                        (update :renders conj (render/create-sprite backend (render/getsub (:deer resources)
+                                                                                    {:x 0, :y 2}))))
         test-atlas3 (-> {}
                         (assoc :position (v/vector 0 0 500))
-                        (update :renders conj (render/create-sprite! backend "assets/images/deer.png" 64.0 64.0)))
+                        (update :renders conj (render/key-texture (render/create-sprite backend (:deer resources))
+                                                                  {:x 0, :y 3})))
         test-cube (-> {}
                       (assoc :position (v/vector -400 100 0))
                       (update :renders conj (render/test-cube backend))
@@ -81,7 +83,7 @@
                         (collision/add-aabb v/zero 200.0 200.0 200.0))
         background (-> {}
                        (assoc :position (v/vector 0 0 -100))
-                       (update :renders conj (render/create-sprite! backend "assets/images/test-background.png" nil nil))
+                       (update :renders conj (render/create-sprite backend (:background resources)))
                        (collision/add-space 1000.0))
         ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
                                                     (/ js/window.innerWidth 2)
@@ -111,8 +113,8 @@
                                             entities
                                             (signals/delta-time (signals/tick 16.0)))
                              (signals/delta-time (render/frames)))]
-    (signals/watch (:collisions test-sprite) :debug-collisions (fn [target old new] (println "Collision! " new)))
-    (signals/watch (:collisions test-cube) :debug-collisions (fn [target old new] (println "Collision! " new)))
+    ;(signals/watch (:collisions test-sprite) :debug-collisions (fn [target old new] (println "Collision! " new)))
+    ;(signals/watch (:collisions test-cube) :debug-collisions (fn [target old new] (println "Collision! " new)))
     (signals/map (fn [event]
                    (when (and (= "i" (:key event))
                               (= :down (:press event)))
@@ -122,3 +124,6 @@
 
 (defn on-js-reload []
   (println "Figwheel: reloaded!"))
+
+(defn ^:export js-start-game! []
+  (render/load-resources! start-game!))

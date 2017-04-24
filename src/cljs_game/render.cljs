@@ -41,16 +41,24 @@
   (defsub [this key offset-x offset-y width height] "Assign a key to a subregion of the texture")
   (getsub [this key] "Fetch subtexture by key"))
 
-(defrecord ^:export ThreeJSTexture [texture submaps width height]
+(defrecord ^:export ThreeJSTexture [texture width height]
   ITexture
   (subtexture [this offset-x offset-y width height]
     (let [new-texture (.clone texture)]
-      (set! (.-offset new-texture) (three/Vector2. offset-x offset-y))
+      (set! (.-needsUpdate new-texture) true)
+      (.set (.-offset new-texture)
+            (/ offset-x (.-width (.-image new-texture)))
+            (/ offset-y (.-height (.-image new-texture))))
       (set! (.-wrapS new-texture) three/RepeatWrapping)
       (set! (.-wrapT new-texture) three/RepeatWrapping)
-      (set! (.-repeat new-texture) (three/Vector2. (/ width (.-width (.-image texture)))
-                                                   (/ height (.-height (.-image texture)))))
-      (assoc this :texture new-texture)))
+      (.set (.-repeat new-texture)
+            (/ width (.-width (.-image new-texture)))
+            (/ height (.-height (.-image new-texture))))
+      (-> this
+          (assoc :texture new-texture)
+          (assoc :width width)
+          (assoc :height height))))
+  
   (magnification-filter [this filter]
     (set! (.-magFilter texture)
           (condp = filter
@@ -66,11 +74,20 @@
             :linear three/LinearFilter
             :linear-mip-nearest three/LinearMipMapNearestFilter
             :linear-mip-linear three/LinearMipMapLinearFilter))
-    this)
+    this))
+
+(defrecord ^:export ThreeJSTextureAtlas [texture submaps]
+  ITexture
+  (subtexture [this offset-x offset-y width height]
+    (assoc this :texture (subtexture texture offset-x offset-y width height)))
+  (magnification-filter [this filter]
+    (assoc this :texture (magnification-filter texture filter)))
+  (minification-filter [this filter]
+    (assoc this :texture (minification-filter texture filter)))
   ITextureAtlas
   (defsub [this key offset-x offset-y width height]
-    (let [sub (subtexture this offset-x offset-y width height)]
-      (assoc submaps key sub)))
+    (let [sub (subtexture texture offset-x offset-y width height)]
+      (assoc-in this [:submaps key] sub)))
   (getsub [this key]
     (get submaps key)))
 
@@ -78,17 +95,18 @@
   "Splices a texture into a regular atlas. Key'd by {x,y}"
   ([texture width height] (sprite-sheet texture v/zero width height))
   ([texture offset width height]
-   ;;hmmm, maybe later
-   texture))
-
-
-;;...threeJS closes over this for us!
-(defn ^:export load-texture!
-  "Load a texture from a URI"
-  [uri]
-  (let [loader (three/TextureLoader.)
-        texture (.load loader uri)]
-    (->ThreeJSTexture texture {} nil nil)))
+   (let [atlas (->ThreeJSTextureAtlas texture {})
+         stride (int (/ (.-width (.-image (:texture texture))) width))
+         rise (int (/ (.-height (.-image (:texture texture))) height))]
+     (reduce (fn [atlas key]
+               (defsub atlas key
+                 (+ (:x offset) (* width (:x key)))
+                 (+ (:y offset) (* height (:y key)))
+                 width height))
+             atlas
+             (for [x (range 0 stride)
+                   y (range 0 rise)]
+               {:x x, :y y})))))
 
 (defprotocol ^:export ISprite
   (key-texture [this key])
@@ -99,37 +117,29 @@
   (set-texture [this texture]
     (let [js-texture (:texture texture)]
       (set! (.-map (.-material object)) js-texture)
+      (set! (.-needsUpdate (.-material object)) true)
+      (set! (.-x (.-scale object)) (:width texture))
+      (set! (.-y (.-scale object)) (:height texture))
       (assoc this :texture texture)))
   (key-texture [this key]
-    (let [js-texture (:texture (getsub texture key))]
-      (set! (.-map (.-material object)) js-texture)
-      (assoc this :atlas-key key)))
+    (if (satisfies? ITextureAtlas texture)
+      (let [sub (getsub texture key)
+            js-texture (:texture sub)]
+        (set! (.-map (.-material object)) js-texture)
+        (set! (.-needsUpdate (.-material object)) true)
+        (set! (.-x (.-scale object)) (:width sub))
+        (set! (.-y (.-scale object)) (:height sub))
+        (assoc this :atlas-key key))
+      this))
   IRenderable
   (prepare [this entity]
     (when (some? (:position entity))
-      (set! (.-x (.-position (:sprite this)))
+      (set! (.-x (.-position (:object this)))
             (get-in entity [:position :x]))
-      (set! (.-y (.-position (:sprite this)))
+      (set! (.-y (.-position (:object this)))
             (get-in entity [:position :y]))
-      (set! (.-z (.-position (:sprite this)))
+      (set! (.-z (.-position (:object this)))
             (get-in entity [:position :z])))))
-
-(defn ^:export add-sprite
-  [entity texture]
-  (let [material (three/SpriteMaterial. )
-        sprite (three/Sprite. material)]
-
-    (let [width (.-width (.-image texture))
-          height (.-height (.-image texture))]
-      (set! (.-map material) (:texture texture))
-      (set! (.-lights material) true)
-      (set! (.-x (.-scale sprite)) width)
-      (set! (.-y (.-scale sprite)) height)
-      (set! (.-needsUpdate material) true))
-    (update entity :renders conj (->ThreeJSSprite sprite texture nil 1.0 1.0))))
-
-
-(defrecord ScaleComponent [x y z])
 
 (defn renderable? [entity]
   (and (:renders entity)
@@ -142,8 +152,7 @@
   (add-to-backend [this renderable] "Ensure backend is aware of an entity's render-components. Eg for Three.js this does Scene.add(mesh).")
   (prepare-scene [this entities] "Perform backend specific actions needed before rendering.")
   (test-cube [this])
-  (sprite [this texture])
-  (create-sprite! [this url width height]))
+  (create-sprite [this texture]))
 
 (defrecord ^:export ThreeJSBackend [renderer scene objects]
   RenderBackend
@@ -172,41 +181,20 @@
           mesh (three/Mesh. geometry material)]
       (.add scene mesh)
       (->RenderComponent {:object mesh, :material material, :geometry geometry})))
-  (sprite [this texture]
-    (let [material (three/SpriteMaterial. )
+  (create-sprite [this texture]
+    (let [base-texture (if (satisfies? ITextureAtlas texture)
+                         (:texture texture)
+                         texture)
+          js-texture (:texture base-texture) 
+          material (three/SpriteMaterial.)
           sprite (three/Sprite. material)]
-      (let [width (.-width (.-image texture))
-            height (.-height (.-image texture))]
-        (set! (.-map material) (:texture texture))
-        (set! (.-lights material) true)
-        (set! (.-x (.-scale sprite)) width)
-        (set! (.-y (.-scale sprite)) height)
-        (set! (.-needsUpdate material) true))
+      (set! (.-map material) js-texture)
+      (set! (.-lights material) true)
+      (set! (.-needsUpdate material) true)
+      (set! (.-x (.-scale sprite)) (:width base-texture))
+      (set! (.-y (.-scale sprite)) (:height base-texture))
       (.add scene sprite)
-      (->ThreeJSSprite sprite texture nil 1.0 1.0)))
-
-  (create-sprite!
-    [this image-url width height]
-    (let [material (three/SpriteMaterial. )
-          sprite (three/Sprite. material)
-          loader (three/TextureLoader.)]
-      (.load loader image-url
-             (fn [texture]
-               (let [width (if (some? width) width (.-width (.-image texture)))
-                     height (if (some? height) height (.-height (.-image texture)))]
-                 (set! (.-offset texture) (three/Vector2. 0.0 0.0))
-                 (set! (.-wrapS texture) three/RepeatWrapping)
-                 (set! (.-wrapS texture) three/RepeatWrapping)
-                 (set! (.-repeat texture) (three/Vector2. (/ width (.-width (.-image texture)))
-                                                          (/ height (.-height (.-image texture)))))
-                                        ;(set! (.-magFilter texture) three/NearestFilter)
-                 (set! (.-map material) texture)
-                 (set! (.-lights material) true)
-                 (set! (.-x (.-scale sprite)) width)
-                 (set! (.-y (.-scale sprite)) height)
-                 (set! (.-needsUpdate material) true))))
-      (.add scene sprite)
-      (->RenderComponent {:object sprite, :material material}))))
+      (->ThreeJSSprite sprite texture nil 1.0 1.0))))
 
 (defprotocol ^:export ICamera
   "Abstract camera"
@@ -253,3 +241,22 @@
     (.setSize renderer js/window.innerWidth js/window.innerHeight)
     (js/document.body.appendChild (.-domElement renderer))
     (->ThreeJSBackend renderer scene [light light2])))
+
+(defn ^:export load-texture! [loader [key uri] rest-uris resources start-func]
+  (.load loader uri
+         (fn [js-texture]
+           (let [accum (assoc resources key
+                              (->ThreeJSTexture
+                               js-texture
+                               (.-width (.-image js-texture))
+                               (.-height (.-image js-texture))))]
+             (if (empty? rest-uris)
+               (start-func (create-threejs-backend!) accum)
+               (load-texture! loader (first rest-uris) (rest rest-uris) accum start-func))))))
+
+(defn ^:export load-resources! [start-func]
+  (let [loader (three/TextureLoader.)
+        textures {:placeholder "assets/images/placeholder.png"
+                  :deer "assets/images/deer.png"
+                  :background "assets/images/test-background.png"}]
+    (load-texture! loader (first textures) (rest textures) {} start-func)))
