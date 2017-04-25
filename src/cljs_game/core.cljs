@@ -48,59 +48,153 @@
     (step-entities state delta-time)
     state))
 
+(def graze-animation
+  {:duration 200
+   :frames [{:x 0, :y 3}
+            {:x 1, :y 3}
+            {:x 2, :y 3}
+            {:x 3, :y 3}
+            {:x 2, :y 3}
+            {:x 2, :y 3}
+            {:x 3, :y 3}
+            {:x 2, :y 3}
+            {:x 2, :y 3}
+            {:x 3, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 3}]})
+
+(def graze-animation2
+  {:duration 200
+   :frames [{:x 0, :y 3}
+            {:x 1, :y 3}
+            {:x 2, :y 3}
+            {:x 3, :y 3}
+            {:x 2, :y 3}
+            {:x 2, :y 3}
+            {:x 3, :y 3}
+            {:x 2, :y 3}
+            {:x 2, :y 3}
+            {:x 3, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 4}
+            {:x 3, :y 4}
+            {:x 2, :y 4}
+            {:x 1, :y 4}
+            {:x 0, :y 4}
+            {:x 0, :y 4}
+            {:x 0, :y 4}]})
+
+(def run-animation
+  {:duration 180
+   :frames [{:x 0, :y 2}
+            {:x 1, :y 2}
+            {:x 2, :y 2}
+            {:x 3, :y 2}
+            {:x 4, :y 2}]})
+
+(def stand-animation
+  {:duration 200
+   :frames [{:x 0, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 3}
+            {:x 4, :y 4}
+            {:x 3, :y 4}
+            {:x 2, :y 4}
+            {:x 1, :y 4}
+            {:x 0, :y 4}
+            {:x 0, :y 4}
+            {:x 0, :y 4}]})
+
+
 (defn ^:export start-game! [backend resources]
   (let [resources (update resources :deer render/sprite-sheet 64.0 64.0)
         test-sprite (-> {}
-                        (assoc :position v/zero)
-                        (update :renders conj (render/create-sprite backend (:placeholder resources)))
+                        (assoc :position (v/vector 0 -200 0))
+                        (update :renders conj (render/scale
+                                               (render/key-texture
+                                                (render/create-sprite backend (:deer resources))
+                                                {:x 2, :y 2})
+                                               2.0))
+                        (render/add-animation :stand stand-animation)
+                        (render/set-animation :stand)
                         (input/movement {"a" :left, "d" :right, "s" :down})
                         (physics/body 1.0 0.5)
-                        (collision/add-aabb v/zero 174.0 564.0 1.0)
+                        (collision/add-aabb v/zero 64.0 64.0 10.0)
                         (assoc :collisions (signals/signal nil "collision")))
-        test-atlas (-> {}
-                        (assoc :position (v/vector 0 0 50))
-                        (update :renders conj (render/create-sprite backend
-                                                                    (render/subtexture (:deer resources)
-                                                                                       128 64 64 64))))
         test-atlas2 (-> {}
-                        (assoc :position (v/vector 0 0 200))
-                        (update :renders conj (render/create-sprite backend (render/getsub (:deer resources)
-                                                                                    {:x 0, :y 2}))))
+                        (assoc :position (v/vector 0 -200 200))
+                        (update :renders conj (render/scale
+                                               (render/key-texture
+                                                (render/create-sprite backend (:deer resources))
+                                                {:x 2, :y 3})
+                                               2.0))
+                        (render/add-animation :graze graze-animation)
+                        (render/set-animation :graze))
         test-atlas3 (-> {}
-                        (assoc :position (v/vector 0 0 500))
-                        (update :renders conj (render/key-texture (render/create-sprite backend (:deer resources))
-                                                                  {:x 0, :y 3})))
-        test-cube (-> {}
-                      (assoc :position (v/vector -400 100 0))
-                      (update :renders conj (render/test-cube backend))
-                      (collision/add-aabb v/zero 200.0 200.0 200.0)
-                      (assoc :collisions (signals/signal nil "collision")))
-        moving-cube (-> {}
-                        (assoc :position (v/vector 400 -50 -20))
-                        (update :renders conj (render/test-cube backend))
-                        (ai/add-patrol (v/vector -600 0 0) (v/vector 300 0 0))
-                        (physics/body 1.0 0.2)
-                        (collision/add-aabb v/zero 200.0 200.0 200.0))
-        background (-> {}
-                       (assoc :position (v/vector 0 0 -200))
-                       (update :renders conj (render/create-sprite backend (:background resources)))
-                       (collision/add-space 1000.0))
+                        (assoc :position (v/vector 100 -200 300))
+                        (update :renders conj (render/scale
+                                               (render/key-texture
+                                                (render/create-sprite backend (:deer resources))
+                                                {:x 3, :y 2})
+                                               2.0))
+                        (render/add-animation :run run-animation)
+                        (render/set-animation :run)
+                        (ai/add-patrol (v/vector -300 0 300) (v/vector 300 0 300))
+                        (physics/body 1.0 0.18)
+                        (collision/add-aabb v/zero 64.0 64.0 10.0))
+        a-deer (-> {}
+                   (assoc :position (v/vector -400 -200 0))
+                   (update :renders conj (render/scale
+                                          (render/key-texture
+                                           (render/create-sprite backend (:deer resources))
+                                           {:x 3, :y 3})
+                                          2.0))
+                   (render/add-animation :graze graze-animation2)
+                   (render/set-animation :graze)
+                   (collision/add-aabb v/zero 64.0 64.0 1.0)
+                   (assoc :collisions (signals/signal nil "collision")))
+        space (-> {} (collision/add-space 1000.0))
         forest-0 (-> {}
                      (assoc :position (v/vector 0 0 -150))
-                     (update :renders conj (render/scale (render/create-sprite backend (:forest-0 resources))
-                                                         8.0)))
+                     (update :renders conj (render/scale
+                                            (render/create-sprite
+                                             backend
+                                             (render/magnification-filter
+                                              (:forest-0 resources)
+                                              :nearest))
+                                            2.0)))
         forest-1 (-> {}
                      (assoc :position (v/vector 0 0 -60))
-                     (update :renders conj (render/scale (render/create-sprite backend (:forest-1 resources))
-                                                         8.0)))
+                     (update :renders conj (render/scale
+                                            (render/create-sprite
+                                             backend
+                                             (render/magnification-filter
+                                              (:forest-1 resources)
+                                              :nearest))
+                                            2.0)))
         forest-2 (-> {}
                      (assoc :position (v/vector 0 0 -30))
-                     (update :renders conj (render/scale (render/create-sprite backend (:forest-2 resources))
-                                                         8.0)))
+                     (update :renders conj (render/scale
+                                            (render/create-sprite
+                                             backend
+                                             (render/magnification-filter
+                                              (:forest-2 resources)
+                                              :nearest))
+                                            2.0)))
         forest-3 (-> {}
                      (assoc :position (v/vector 0 0 0))
-                     (update :renders conj (render/scale (render/create-sprite backend (:forest-3 resources))
-                                                         8.0)))
+                     (update :renders conj (render/scale
+                                            (render/create-sprite
+                                             backend
+                                             (render/magnification-filter
+                                              (:forest-3 resources)
+                                              :nearest))
+                                            2.0)))
         ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
                                                     (/ js/window.innerWidth 2)
                                                     (/ js/window.innerHeight 2)
@@ -108,14 +202,12 @@
                          (input/movement {"q" :left, "e" :right})
                          (physics/body 1.0 0.5))
         pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
-                        (ai/follow :player (v/vector 0 0 700)))
+                        (ai/follow :player (v/vector 0 100 700)))
         entities {:player test-sprite
-                  :deer test-atlas
                   :deer2 test-atlas2
                   :deer3 test-atlas3
-                  :a-cube test-cube
-                  :m-cube moving-cube
-                  :background background
+                  :a-deer a-deer
+                  :space space
                   :forest-0 forest-0
                   :forest-1 forest-1
                   :forest-2 forest-2
@@ -133,6 +225,7 @@
                                             entities
                                             (signals/delta-time (signals/tick 16.0)))
                              (signals/delta-time (render/frames)))]
+    (signals/propagate (:bah test-atlas3) {:key :left, :press :down})
     ;(signals/watch (:collisions test-sprite) :debug-collisions (fn [target old new] (println "Collision! " new)))
     ;(signals/watch (:collisions test-cube) :debug-collisions (fn [target old new] (println "Collision! " new)))
     (signals/map (fn [event]
@@ -147,3 +240,6 @@
 
 (defn ^:export js-start-game! []
   (render/load-resources! start-game!))
+
+(defn -main [bah]
+  (println bah))

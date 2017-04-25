@@ -62,8 +62,9 @@
   (magnification-filter [this filter]
     (set! (.-magFilter texture)
           (condp = filter
-            :bilinear three/LinearFilter
-            :linear three/NearestFilter))
+            :linear three/LinearFilter
+            :nearest three/NearestFilter))
+    (set! (.-needsUpdate texture) true)
     this)
   (minification-filter [this filter]
     (set! (.-minFilter texture)
@@ -74,6 +75,7 @@
             :linear three/LinearFilter
             :linear-mip-nearest three/LinearMipMapNearestFilter
             :linear-mip-linear three/LinearMipMapLinearFilter))
+    (set! (.-needsUpdate texture) true)
     this))
 
 (defrecord ^:export ThreeJSTextureAtlas [texture submaps]
@@ -95,7 +97,8 @@
   "Splices a texture into a regular atlas. Key'd by {x,y}"
   ([texture width height] (sprite-sheet texture v/zero width height))
   ([texture offset width height]
-   (let [atlas (->ThreeJSTextureAtlas texture {})
+   (let [texture (magnification-filter texture :nearest)
+         atlas (->ThreeJSTextureAtlas texture {})
          stride (int (/ (.-width (.-image (:texture texture))) width))
          rise (int (/ (.-height (.-image (:texture texture))) height))]
      (reduce (fn [atlas key]
@@ -151,6 +154,64 @@
       (set! (.-z (.-position (:object this)))
             (get-in entity [:position :z])))))
 
+(defn ^:export add-animation [entity key animation]
+  (assoc-in entity [:animations key] animation))
+
+(defn ^:export set-animation [entity key]
+  (let [animation (get (:animations entity) key)]
+    (if (some? animation)
+      (assoc entity :current-frame
+             (s/map (fn [frames]
+                      (first frames)) 
+                    (s/foldp (fn [state step]
+                               (let [remaining (rest state)]
+                                 (if (empty? remaining)
+                                   (:frames animation)
+                                   (rest state))))
+                             (:frames animation)
+                             (s/tick (:duration animation)))))
+      entity)))
+
+(defn ^:export get-animation* [entity key]
+  (let [animation (get-in entity [:animations key])]
+    (s/map (fn [frames]
+             (first frames)) 
+           (s/foldp (fn [state step]
+                      (let [remaining (rest state)]
+                        (if (empty? remaining)
+                          (:frames animation)
+                          (rest state))))
+                    (:frames animation)
+                    (s/tick (:duration animation))))))
+
+(defn ^:export state-animate [entity states signal]
+  (assoc entity :current-frame
+         (s/foldp (fn [current-animation state]
+                    (let [new-state (:state state)
+                          next-animation (get states new-state)]
+                      (if (some? next-animation)
+                        (get-animation* entity next-animation)
+                        current-animation)))
+                  (get-animation* entity (first (vals states)))
+                  (:movement entity))))
+
+(defn ^:export animate
+  [entities delta-t]
+  (reduce-kv (fn [entities id entity]
+               (if (and (some? (:current-frame entity))
+                        (not (empty? (:renders entity))))
+                 (assoc entities id
+                        (assoc entity :renders
+                               (map (fn [renderer]
+                                      (if (satisfies? ISprite renderer)
+                                        (key-texture renderer (s/value (:current-frame entity)))
+                                        renderer))
+                                    (:renders entity))))
+                 entities))
+             entities
+             entities))
+
+
 (defn renderable? [entity]
   (and (:renders entity)
        (pos? (count (:renders entity)))
@@ -170,7 +231,7 @@
     (.add scene (get renderable :object))
     renderable)
   (render [this entities camera]
-    (let [entities (doall (prepare-scene this entities))
+    (let [entities (doall (prepare-scene this (animate entities 0.0)))
           cam (:object (first (:renders (get entities camera))))]
       (.render renderer scene cam)
       entities))
@@ -255,6 +316,8 @@
 (defn ^:export load-texture! [loader [key uri] rest-uris resources start-func]
   (.load loader uri
          (fn [js-texture]
+           (set! (.-magFilter js-texture) three/NearestFilter)
+           (set! (.-needsUpdate js-texture) true)
            (let [accum (assoc resources key
                               (->ThreeJSTexture
                                js-texture

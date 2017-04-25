@@ -21,7 +21,8 @@
   (let [command-signal (s/signal nil "patrol-ai")
         bah (-> entity
                 (assoc :ai (patrol left right command-signal))
-                (assoc :movement (input/movement-fsm command-signal)))]
+                (assoc :movement (input/movement-fsm command-signal))
+                (assoc :bah command-signal))]
     (s/propagate command-signal {:key :left, :press :down})
     bah))
 

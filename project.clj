@@ -20,9 +20,9 @@
   :cljsbuild {:builds {:dev {:source-paths ["src"]
                              :figwheel {:on-jsload "cljs-game.core/on-js-reload"}
                              :compiler {:main cljs-game.core
-                                        :output-dir "resources/public/js/build-dev"
+                                        :output-dir "resources/public/js"
                                         :output-to "resources/public/js/main.js"
-                                        :asset-path "js/build-dev"
+                                        :asset-path "js"
                                         :source-map-timestamp true
                                         :foreign-libs [{:file "resources/libs/three.module.js"
                                                         :provides  ["threejs"]
