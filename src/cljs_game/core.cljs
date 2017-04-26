@@ -120,9 +120,9 @@
                                                 (render/create-sprite backend (:deer resources))
                                                 {:x 2, :y 2})
                                                2.0))
-                        (render/add-animation :stand stand-animation)
-                        (render/set-animation :stand)
                         (input/movement {"a" :left, "d" :right, "s" :down})
+                        (render/add-animation :stand stand-animation)
+                        (render/add-animation :run run-animation)
                         (physics/body 1.0 0.5)
                         (collision/add-aabb v/zero 64.0 64.0 10.0)
                         (assoc :collisions (signals/signal nil "collision")))
@@ -203,7 +203,12 @@
                          (physics/body 1.0 0.5))
         pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
                         (ai/follow :player (v/vector 0 100 700)))
-        entities {:player test-sprite
+        entities {:player
+                  (render/state-animate test-sprite
+                                        {:standing :stand
+                                         :moving-left :run
+                                         :moving-right :run}
+                                        (:movement test-sprite))
                   :deer2 test-atlas2
                   :deer3 test-atlas3
                   :a-deer a-deer

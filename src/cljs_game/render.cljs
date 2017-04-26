@@ -154,46 +154,30 @@
       (set! (.-z (.-position (:object this)))
             (get-in entity [:position :z])))))
 
+(defn ^:export animation-frames [animation]
+  (s/map (fn [frames]
+           (first frames))
+         (s/foldp (fn [state step]
+                    (rest state))
+                  (cycle (:frames animation))
+                  (s/tick (:duration animation)))))
+
 (defn ^:export add-animation [entity key animation]
-  (assoc-in entity [:animations key] animation))
+  (assoc-in entity [:animations key]
+            (animation-frames animation)))
 
 (defn ^:export set-animation [entity key]
   (let [animation (get (:animations entity) key)]
     (if (some? animation)
-      (assoc entity :current-frame
-             (s/map (fn [frames]
-                      (first frames)) 
-                    (s/foldp (fn [state step]
-                               (let [remaining (rest state)]
-                                 (if (empty? remaining)
-                                   (:frames animation)
-                                   (rest state))))
-                             (:frames animation)
-                             (s/tick (:duration animation)))))
+      (assoc entity :current-frame animation)
       entity)))
-
-(defn ^:export get-animation* [entity key]
-  (let [animation (get-in entity [:animations key])]
-    (s/map (fn [frames]
-             (first frames)) 
-           (s/foldp (fn [state step]
-                      (let [remaining (rest state)]
-                        (if (empty? remaining)
-                          (:frames animation)
-                          (rest state))))
-                    (:frames animation)
-                    (s/tick (:duration animation))))))
 
 (defn ^:export state-animate [entity states signal]
   (assoc entity :current-frame
-         (s/foldp (fn [current-animation state]
-                    (let [new-state (:state state)
-                          next-animation (get states new-state)]
-                      (if (some? next-animation)
-                        (get-animation* entity next-animation)
-                        current-animation)))
-                  (get-animation* entity (first (vals states)))
-                  (:movement entity))))
+         (s/switch (s/map (fn [state]
+                            (get states (:state state)))
+                          signal)
+                   (:animations entity))))
 
 (defn ^:export animate
   [entities delta-t]

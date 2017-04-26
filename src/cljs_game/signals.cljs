@@ -8,6 +8,7 @@
    Consumers register with watch (which mirrors `add-watch`). Producers
    use `propagate` to send a new value to consumers."
   (watch [this target handler] "Registers handler when signal value changes. `target` is a key used to identifier the consumer.")
+  (unwatch [this target])
   (propagate [this value] "Pushs a new value to consumers.")
   (value [this] "Returns the current value of the signal."))
 
@@ -18,6 +19,8 @@
     (add-watch value target
                (fn [key ref old new]
                  (handler key old new))))
+  (unwatch [this target]
+    (remove-watch value target))
   (propagate [this new-value]
     (reset! value new-value))
   (value [this]
@@ -136,6 +139,18 @@
                    (fn [] (propagate out-signal (system-time)))
                    delay)
      out-signal)))
+
+(defn ^:export switch
+  "Reverse route, switch on signal. Switch signal provides key for signal to watch"
+  [switch-signal inputs]
+  (let [out-signal (signal nil "switch")]
+    (watch switch-signal (:tag out-signal)
+           (fn [target old-switch new-switch]
+             (unwatch (get inputs old-switch) (:tag out-signal))
+             (watch (get inputs new-switch) (:tag out-signal)
+                    (fn [target old new]
+                      (propagate out-signal new)))))
+    out-signal))
 
 ;; exports
 (def ^:export map
