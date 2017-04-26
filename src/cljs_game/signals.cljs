@@ -54,7 +54,8 @@
 ;;;; 2) Wait for all signals to change (must keep track of all signals...)
 (defn- map*
   [f in-signal]
-  (let [out-signal (signal nil "map")]
+  (let [init-val (f (value in-signal))
+        out-signal (signal init-val "map")]
     (watch in-signal (:tag out-signal)
            (fn [target old-state new-state]
              (propagate out-signal (f new-state))))
@@ -108,7 +109,7 @@
 (defn ^:export timed
   "Returns a signal that emits the time when the input-signal triggers."
   [trigger-signal]
-  (let [out-signal (signal 0.0 "timed")]
+  (let [out-signal (signal (system-time) "timed")]
     (watch trigger-signal (:tag out-signal)
            (fn [target old-state new-state]
              (propagate out-signal (system-time))))
@@ -143,7 +144,12 @@
 (defn ^:export switch
   "Reverse route, switch on signal. Switch signal provides key for signal to watch"
   [switch-signal inputs]
-  (let [out-signal (signal nil "switch")]
+  (let [init-switch (value switch-signal)
+        out-signal (signal init-switch "switch")]
+    (when (some? init-switch)
+      (watch (get inputs init-switch) (:tag out-signal)
+             (fn [target old new]
+               (propagate out-signal new))))
     (watch switch-signal (:tag out-signal)
            (fn [target old-switch new-switch]
              (unwatch (get inputs old-switch) (:tag out-signal))
