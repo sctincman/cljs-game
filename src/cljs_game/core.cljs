@@ -89,7 +89,7 @@
             {:x 0, :y 4}
             {:x 0, :y 4}]})
 
-(def run-animation
+(def run-animation-right
   {:duration 180
    :frames [{:x 0, :y 2}
             {:x 1, :y 2}
@@ -97,7 +97,15 @@
             {:x 3, :y 2}
             {:x 4, :y 2}]})
 
-(def stand-animation
+(def run-animation-left
+  {:duration 180
+   :frames [{:x -1, :y 2}
+            {:x -2, :y 2}
+            {:x -3, :y 2}
+            {:x -4, :y 2}
+            {:x -5, :y 2}]})
+
+(def stand-animation-right
   {:duration 200
    :frames [{:x 0, :y 3}
             {:x 4, :y 3}
@@ -110,6 +118,18 @@
             {:x 0, :y 4}
             {:x 0, :y 4}]})
 
+(def stand-animation-left
+  {:duration 200
+   :frames [{:x -1, :y 3}
+            {:x -5, :y 3}
+            {:x -5, :y 3}
+            {:x -5, :y 4}
+            {:x -4, :y 4}
+            {:x -3, :y 4}
+            {:x -2, :y 4}
+            {:x -1, :y 4}
+            {:x -1, :y 4}
+            {:x -1, :y 4}]})
 
 (defn ^:export start-game! [backend resources]
   (let [resources (update resources :deer render/sprite-sheet 64.0 64.0)
@@ -121,8 +141,10 @@
                                                 {:x 2, :y 2})
                                                2.0))
                         (input/movement {"a" :left, "d" :right, "s" :down})
-                        (render/add-animation :stand stand-animation)
-                        (render/add-animation :run run-animation)
+                        (render/add-animation :stand-right stand-animation-right)
+                        (render/add-animation :stand-left stand-animation-left)
+                        (render/add-animation :run-right run-animation-right)
+                        (render/add-animation :run-left run-animation-left)
                         (physics/body 1.0 0.5)
                         (collision/add-aabb v/zero 64.0 64.0 10.0)
                         (assoc :collisions (signals/signal nil "collision")))
@@ -142,8 +164,9 @@
                                                 (render/create-sprite backend (:deer resources))
                                                 {:x 3, :y 2})
                                                2.0))
-                        (render/add-animation :run run-animation)
-                        (render/set-animation :run)
+                        (render/add-animation :run-right run-animation-right)
+                        (render/add-animation :run-left run-animation-left)
+                        (render/set-animation :run-right)
                         (ai/add-patrol (v/vector -300 0 300) (v/vector 300 0 300))
                         (physics/body 1.0 0.18)
                         (collision/add-aabb v/zero 64.0 64.0 10.0))
@@ -205,9 +228,9 @@
                         (ai/follow :player (v/vector 0 100 700)))
         entities {:player
                   (render/state-animate test-sprite
-                                        {:standing :stand
-                                         :moving-left :run
-                                         :moving-right :run}
+                                        {:standing :stand-right
+                                         :moving-left :run-left
+                                         :moving-right :run-right}
                                         (:movement test-sprite))
                   :deer2 test-atlas2
                   :deer3 test-atlas3

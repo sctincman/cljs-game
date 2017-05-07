@@ -49,8 +49,10 @@
       (.set (.-offset new-texture)
             (/ offset-x (.-width (.-image new-texture)))
             (/ offset-y (.-height (.-image new-texture))))
-      (set! (.-wrapS new-texture) three/RepeatWrapping)
-      (set! (.-wrapT new-texture) three/RepeatWrapping)
+      (when (or (neg? offset-x)
+                (neg? offset-y))
+        (set! (.-wrapS new-texture) three/MirroredRepeatWrapping)
+        (set! (.-wrapT new-texture) three/MirroredRepeatWrapping))
       (.set (.-repeat new-texture)
             (/ width (.-width (.-image new-texture)))
             (/ height (.-height (.-image new-texture))))
@@ -94,7 +96,7 @@
     (get submaps key)))
 
 (defn ^:export sprite-sheet
-  "Splices a texture into a regular atlas. Key'd by {x,y}"
+  "Splices a texture into a regular atlas. Key'd by {x,y}. Negative indexes flip on the respective axis."
   ([texture width height] (sprite-sheet texture v/zero width height))
   ([texture offset width height]
    (let [texture (magnification-filter texture :nearest)
@@ -107,8 +109,8 @@
                  (+ (:y offset) (* height (:y key)))
                  width height))
              atlas
-             (for [x (range 0 stride)
-                   y (range 0 rise)]
+             (for [x (range (- stride) stride)
+                   y (range (- rise) rise)]
                {:x x, :y y})))))
 
 (defprotocol ^:export ISprite
