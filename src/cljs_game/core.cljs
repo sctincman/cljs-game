@@ -1,5 +1,5 @@
 (ns cljs-game.core
-  (:require [cljs-game.render :as render]
+  (:require [cljs-game.render.core :as render]
             [cljs-game.input :as input]
             [cljs-game.entity :as ecs]
             [cljs-game.physics :as physics]
@@ -7,6 +7,8 @@
             [cljs-game.signals :as signals]
             [cljs-game.vector :as v]
             [cljs-game.collision :as collision]
+            [cljs-game.render.threejs.camera :as camera]
+            [cljs-game.render.threejs.core :as tjs]
             [cljs-game.ai :as ai]))
 
 (enable-console-print!)
@@ -132,7 +134,7 @@
             {:x -1, :y 4}]})
 
 (defn ^:export start-game! [backend resources]
-  (let [resources (update resources :deer render/sprite-sheet 64.0 64.0)
+  (let [resources (update resources :deer render/splice v/zero 64.0 64.0)
         test-sprite (-> {}
                         (assoc :position (v/vector 0 -200 0))
                         (update :renders conj (render/scale
@@ -218,13 +220,13 @@
                                               (:forest-3 resources)
                                               :nearest))
                                             2.0)))
-        ortho-camera (-> (render/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
+        ortho-camera (-> (camera/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
                                                     (/ js/window.innerWidth 2)
                                                     (/ js/window.innerHeight 2)
                                                     (/ js/window.innerHeight -2) 0.1 1000)
                          (input/movement {"q" :left, "e" :right})
                          (physics/body 1.0 0.5))
-        pers-camera (-> (render/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
+        pers-camera (-> (camera/ThreeJSPerspectiveCamera 75 (/ js/window.innerWidth js/window.innerHeight) 0.1 1000)
                         (ai/follow :player (v/vector 0 100 700)))
         entities {:player
                   (render/state-animate test-sprite
@@ -267,7 +269,7 @@
   (println "Figwheel: reloaded!"))
 
 (defn ^:export js-start-game! []
-  (render/load-resources! start-game!))
+  (tjs/load-resources! start-game!))
 
 (defn -main [bah]
   (println bah))
