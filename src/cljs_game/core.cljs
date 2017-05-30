@@ -220,6 +220,13 @@
                                               (:forest-3 resources)
                                               :nearest))
                                             2.0)))
+        newsprite (-> {}
+                      (assoc :position (v/vector 50 200 250))
+                      (update :renders conj
+                              (render/create-sprite2
+                               backend (render/getsub
+                                        (:deer resources)
+                                        {:x 2, :y 2}))))
         ortho-camera (-> (camera/ThreeJSOrthoCamera (/ js/window.innerWidth -2)
                                                     (/ js/window.innerWidth 2)
                                                     (/ js/window.innerHeight 2)
@@ -242,6 +249,7 @@
                   :forest-1 forest-1
                   :forest-2 forest-2
                   :forest-3 forest-3
+                  :newsprite newsprite
                   :orthographic-camera ortho-camera
                   :perspective-camera pers-camera}
         ;;This... is our game loop!

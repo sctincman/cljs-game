@@ -70,41 +70,46 @@
       (.add scene sprite)
       (sprite/->ThreeJSSprite sprite texture nil 1.0 1.0)))
   (create-sprite2 [this texture]
-    (let [gl (.context renderer)
-          vertices (js/Float32Array
-                    [- 0.5, - 0.5,  0, 0,
-                     0.5, - 0.5,  1, 0,
-                     0.5,   0.5,  1, 1,
-                     - 0.5,   0.5,  0, 1])
+    (let [vertices (js/Float32Array.
+                    [-0.5, -0.5,  0.0,
+                      0.5, -0.5,  0.0,
+                      0.5,  0.5,  0.0,
+                     -0.5,  0.5,  0.0])
+          uvs (js/Float32Array.
+               [0.0, 0.0,
+                1.0, 0.0,
+                1.0, 1.0,
+                0.0, 1.0])
           indices (js/Uint16Array.
                    [0, 1, 2,
                     0, 2, 3])
-          vertex-buffer (.createBuffer gl)
-          index-buffer (.createBuffer gl)
-          
-
           base-texture (if (satisfies? render/ITextureAtlas texture)
                          (:texture texture)
                          texture)
-          js-texture (:texture base-texture) 
-          material (three/SpriteMaterial.)
-          sprite (three/Sprite. material)]
-      (set! (.-map material) js-texture)
-      (set! (.-lights material) true)
-      (set! (.-needsUpdate material) true)
-      (set! (.-x (.-scale sprite)) (:width base-texture))
-      (set! (.-y (.-scale sprite)) (:height base-texture))
-      (.add scene sprite)
-      (sprite/->ThreeJSSprite sprite texture nil 1.0 1.0))))
+          js-texture (:texture base-texture)
+          geometry (three/BufferGeometry.)
+          material (three/MeshBasicMaterial.
+                    (js-obj "map" js-texture
+                            "wireframe" false
+                            "transparent" true))]
+      (.addAttribute geometry "position" (three/BufferAttribute. vertices 3))
+      (.addAttribute geometry "uv" (three/BufferAttribute. uvs 2))
+      (.setIndex geometry (three/BufferAttribute. indices 1))
+      (.computeBoundingBox geometry)
+      (let [mesh (three/Mesh. geometry material)]
+        (set! (.-x (.-scale mesh)) (:width base-texture))
+        (set! (.-y (.-scale mesh)) (:height base-texture))
+        (.add scene mesh)
+        (->ThreeJSRenderComponent {:object mesh, :material material, :geometry geometry})))))
 
 (defn ^:export create-threejs-backend! []
   (let [scene (three/Scene.)
         renderer (three/WebGLRenderer.)
-        light (three/AmbientLight. 0x404050)
-        light2 (three/PointLight. 0xcbdbdf 2 0)]
+        light (three/AmbientLight. 0xffffff)
+        light2 (three/PointLight. 0xffffff 2 0)]
     (.add scene light)
     (set! (.-background scene) (three/Color. 0x6c6c6c))
-    (.set (.-position light2) 300 300 300)
+    (.set (.-position light2) 300 300 400)
     (.add scene light2)
     (.setSize renderer js/window.innerWidth js/window.innerHeight)
     (js/document.body.appendChild (.-domElement renderer))
