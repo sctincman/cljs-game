@@ -34,6 +34,26 @@
   ([init] (->Signal (atom init) (keyword (gensym "signal_"))))
   ([init prefix] (->Signal (atom init) (keyword (gensym prefix)))))
 
+(defn ^:export fold
+  "Transduction of input signal using transducer."
+  [xform in-signal]
+  (let [out-signal (signal nil "fold")
+        f (xform
+           (fn
+             ([] out-signal)
+             ([result input]
+              (propagate out-signal (unreduced input))
+              input)
+             ([result]
+              (unwatch in-signal (:tag out-signal))
+              result)))]
+    (watch in-signal (:tag out-signal)
+           (fn [target old-state new-state]
+             (let [result (f old-state new-state)]
+               (when (reduced? result)
+                 (f result)))))
+    (f)))
+
 ;; Watchers call the outputs!
 ;; Don't return values, return signals
 (defn ^:export foldp

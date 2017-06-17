@@ -266,11 +266,10 @@
     (signals/propagate (:bah test-atlas3) {:key :left, :press :down})
     ;(signals/watch (:collisions test-sprite) :debug-collisions (fn [target old new] (println "Collision! " new)))
     ;(signals/watch (:collisions test-cube) :debug-collisions (fn [target old new] (println "Collision! " new)))
-    (signals/map (fn [event]
-                   (when (and (= "i" (:key event))
-                              (= :down (:press event)))
-                       (println (signals/value world))))
-                 input/keyboard)
+    (signals/fold (comp (filter (fn [event] (and (= "i" (:key event)) (= :down (:press event)))))
+                        (map (fn [x] (println (signals/value world)))))
+                  input/keyboard)
+
     world))
 
 (defn on-js-reload []
